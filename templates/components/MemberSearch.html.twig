@@ -1,6 +1,4 @@
-{# Live Component fuer die Echtzeit-Suche. #}
-{# Bei jeder Eingabe wird getMembers() auf dem Server aufgerufen #}
-{# und nur dieser <div>-Block wird neu gerendert. #}
+{# Live Component fuer Suche, Sortierung und Paginierung. #}
 <div {{ attributes }}>
 
     {# --- Suchfeld --- #}
@@ -23,15 +21,57 @@
 
     {# --- Ergebnis-Zaehler --- #}
     {% set members = this.members %}
+    {% set total = this.total %}
+    {% set lastPage = this.lastPage %}
     <p class="mt-4 text-sm text-warm-400">
-        {{ members|length }} Mitglied{{ members|length != 1 ? 'er' : '' }} gefunden
+        {{ total }} Mitglied{{ total != 1 ? 'er' : '' }}
         {% if query is not empty %}
             fuer &bdquo;{{ query }}&ldquo;
         {% endif %}
+        {% if lastPage > 1 %}
+            &middot; Seite {{ page }} von {{ lastPage }}
+        {% endif %}
     </p>
+
+    {# ====================================================================== #}
+    {# Makro fuer den Sortier-Pfeil. Wird in den Tabellenkoepfen benutzt.     #}
+    {# Ein Makro ist wie eine Funktion in Twig — wiederverwendbares Template. #}
+    {# ====================================================================== #}
+    {% macro sort_icon(field, currentSort, currentDirection) %}
+        {% if currentSort == field %}
+            {# Aktive Spalte: Pfeil zeigt die aktuelle Richtung an #}
+            {% if currentDirection == 'ASC' %}
+                <svg class="ml-1 inline h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+            {% else %}
+                <svg class="ml-1 inline h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+            {% endif %}
+        {% else %}
+            {# Inaktive Spalte: dezenter Doppelpfeil #}
+            <svg class="ml-1 inline h-3 w-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>
+        {% endif %}
+    {% endmacro %}
 
     {# ========== MOBILE: Card-Layout (sichtbar unter lg) ========== #}
     <div class="mt-4 space-y-4 lg:hidden">
+        {# Mobile Sortier-Buttons #}
+        <div class="flex flex-wrap gap-2">
+            {% for field, label in { name: 'Name', team: 'Team', role: 'Rolle' } %}
+                <button
+                    type="button"
+                    data-action="live#action"
+                    data-live-action-param="sort"
+                    data-live-field-param="{{ field }}"
+                    class="rounded-full border px-3 py-1 text-xs font-medium transition-colors
+                        {{ sortBy == field
+                            ? 'border-accent-500 bg-accent-50 text-accent-700'
+                            : 'border-warm-300 text-warm-500 hover:border-warm-400' }}"
+                >
+                    {{ label }}
+                    {{ _self.sort_icon(field, sortBy, sortDirection) }}
+                </button>
+            {% endfor %}
+        </div>
+
         {% for member in members %}
             <div class="rounded-xl border border-warm-200 p-5">
                 <div class="flex items-start justify-between">
@@ -103,11 +143,25 @@
             <table class="w-full text-left text-sm">
                 <thead class="border-b border-warm-200 bg-warm-100">
                     <tr>
-                        <th class="px-6 py-3 font-medium text-warm-600">Name</th>
-                        <th class="px-6 py-3 font-medium text-warm-600">Email</th>
-                        <th class="px-6 py-3 font-medium text-warm-600">Team</th>
+                        {# Sortierbare Spaltenkoepfe: #}
+                        {# data-action="live#action" ruft die sort()-Methode auf dem Server auf. #}
+                        {# data-live-action-param="sort(field=name)" uebergibt den Feldnamen. #}
+                        {% for field, label in { name: 'Name', email: 'Email', team: 'Team', role: 'Rolle' } %}
+                            <th class="px-6 py-3 font-medium text-warm-600">
+                                <button
+                                    type="button"
+                                    data-action="live#action"
+                                    data-live-action-param="sort"
+                    data-live-field-param="{{ field }}"
+                                    class="inline-flex items-center transition-colors hover:text-warm-900"
+                                >
+                                    {{ label }}
+                                    {{ _self.sort_icon(field, sortBy, sortDirection) }}
+                                </button>
+                            </th>
+                        {% endfor %}
+                        {# Position ist nicht sortierbar (oft leer) #}
                         <th class="px-6 py-3 font-medium text-warm-600">Position</th>
-                        <th class="px-6 py-3 font-medium text-warm-600">Rolle</th>
                         <th class="px-6 py-3 font-medium text-warm-600 text-right">Aktionen</th>
                     </tr>
                 </thead>
@@ -117,7 +171,6 @@
                             <td class="px-6 py-4 font-medium text-warm-900">{{ member.name }}</td>
                             <td class="px-6 py-4 text-warm-500">{{ member.email }}</td>
                             <td class="px-6 py-4 text-warm-500">{{ member.team.name }}</td>
-                            <td class="px-6 py-4 text-warm-500">{{ member.position ?? '—' }}</td>
                             <td class="px-6 py-4">
                                 <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium
                                     {% if member.role == 'Trainer' %}
@@ -131,6 +184,7 @@
                                     {{ member.role }}
                                 </span>
                             </td>
+                            <td class="px-6 py-4 text-warm-500">{{ member.position ?? '—' }}</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-3">
                                     <a href="{{ path('app_club_planner_edit', { id: member.id }) }}" class="text-sm text-warm-500 hover:text-accent-600 transition-colors">
@@ -174,4 +228,63 @@
             </table>
         </div>
     </div>
+
+    {# ========== PAGINIERUNG ========== #}
+    {# Wird nur angezeigt wenn es mehr als eine Seite gibt. #}
+    {% if lastPage > 1 %}
+        <nav class="mt-6 flex items-center justify-between">
+            {# Zurueck-Button #}
+            {% if page > 1 %}
+                <button
+                    type="button"
+                    data-action="live#action"
+                    data-live-action-param="goToPage"
+                    data-live-page-param="{{ page - 1 }}"
+                    class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100"
+                >
+                    &larr; Zurueck
+                </button>
+            {% else %}
+                {# Deaktivierter Button wenn auf Seite 1 #}
+                <span class="rounded-lg border border-warm-200 px-4 py-2 text-sm font-medium text-warm-300">
+                    &larr; Zurueck
+                </span>
+            {% endif %}
+
+            {# Seiten-Nummern #}
+            <div class="flex gap-1">
+                {% for p in 1..lastPage %}
+                    <button
+                        type="button"
+                        data-action="live#action"
+                        data-live-action-param="goToPage"
+                        data-live-page-param="{{ p }}"
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
+                            {{ p == page
+                                ? 'bg-warm-900 text-warm-50'
+                                : 'text-warm-500 hover:bg-warm-100 hover:text-warm-900' }}"
+                    >
+                        {{ p }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            {# Weiter-Button #}
+            {% if page < lastPage %}
+                <button
+                    type="button"
+                    data-action="live#action"
+                    data-live-action-param="goToPage"
+                    data-live-page-param="{{ page + 1 }}"
+                    class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100"
+                >
+                    Weiter &rarr;
+                </button>
+            {% else %}
+                <span class="rounded-lg border border-warm-200 px-4 py-2 text-sm font-medium text-warm-300">
+                    Weiter &rarr;
+                </span>
+            {% endif %}
+        </nav>
+    {% endif %}
 </div>
