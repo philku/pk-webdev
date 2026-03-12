@@ -1,0 +1,75 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Vereinsplaner{% endblock %}
+
+{% block body %}
+    <section class="py-12">
+        <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
+            Tech Demo
+        </p>
+        <h1 class="mt-3 font-heading text-4xl text-warm-900">Vereinsplaner</h1>
+        <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
+            Mitgliederverwaltung mit CRUD, Live-Suche und Echtzeit-Validierung.
+        </p>
+    </section>
+
+    {# Mitgliedertabelle #}
+    <section class="py-8">
+        <div class="overflow-hidden rounded-xl border border-warm-200">
+            <table class="w-full text-left text-sm">
+                {# Tabellenkopf #}
+                <thead class="border-b border-warm-200 bg-warm-100">
+                    <tr>
+                        <th class="px-6 py-3 font-medium text-warm-600">Name</th>
+                        <th class="hidden px-6 py-3 font-medium text-warm-600 sm:table-cell">Email</th>
+                        <th class="hidden px-6 py-3 font-medium text-warm-600 md:table-cell">Team</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Position</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Rolle</th>
+                    </tr>
+                </thead>
+
+                {# Tabelleninhalt — hier iterieren wir über die Members aus der DB #}
+                <tbody class="divide-y divide-warm-200">
+                    {# for-Schleife in Twig: wie foreach in PHP #}
+                    {% for member in members %}
+                        <tr class="transition-colors hover:bg-warm-50">
+                            <td class="px-6 py-4 font-medium text-warm-900">
+                                {{ member.name }}
+                            </td>
+                            <td class="hidden px-6 py-4 text-warm-500 sm:table-cell">
+                                {{ member.email }}
+                            </td>
+                            <td class="hidden px-6 py-4 text-warm-500 md:table-cell">
+                                {# member.team greift auf das Team-OBJEKT zu,
+                                   .name holt den Namen davon — die Relation funktioniert einfach so! #}
+                                {{ member.team.name }}
+                            </td>
+                            <td class="px-6 py-4 text-warm-500">
+                                {{ member.position ?? '—' }}
+                            </td>
+                            <td class="px-6 py-4">
+                                {# Rolle als farbiges Badge #}
+                                <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium
+                                    {% if member.role == 'Trainer' %}
+                                        bg-amber-50 text-amber-700 border border-amber-200
+                                    {% elseif member.role == 'Betreuer' %}
+                                        bg-purple-50 text-purple-700 border border-purple-200
+                                    {% else %}
+                                        bg-accent-600/5 text-accent-700 border border-accent-600/20
+                                    {% endif %}
+                                ">
+                                    {{ member.role }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Info-Zeile unter der Tabelle #}
+        <p class="mt-4 text-sm text-warm-400">
+            {{ members|length }} Mitglieder in {{ teams|length }} Teams
+        </p>
+    </section>
+{% endblock %}
