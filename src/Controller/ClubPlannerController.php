@@ -4,8 +4,6 @@ namespace App\Controller;
 
 use App\Entity\Member;
 use App\Form\MemberType;
-use App\Repository\MemberRepository;
-use App\Repository\TeamRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,13 +15,12 @@ use Symfony\Component\Routing\Attribute\Route;
 class ClubPlannerController extends AbstractController
 {
     // ---------- Liste ----------
+    // Die Mitgliederliste wird jetzt von der Live Component "MemberSearch" gerendert.
+    // Der Controller liefert nur noch die Seite aus — die Daten holt die Komponente selbst.
     #[Route('', name: 'app_club_planner')]
-    public function index(MemberRepository $memberRepository, TeamRepository $teamRepository): Response
+    public function index(): Response
     {
-        return $this->render('club_planner/index.html.twig', [
-            'members' => $memberRepository->findAll(),
-            'teams' => $teamRepository->findAll(),
-        ]);
+        return $this->render('club_planner/index.html.twig');
     }
 
     // ---------- Neues Mitglied erstellen ----------

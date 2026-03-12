@@ -21,7 +21,7 @@
     <body class="min-h-screen bg-warm-50 text-warm-800 antialiased">
 
         {# ========== NAVIGATION ========== #}
-        <header class="sticky top-0 z-50 border-b border-warm-200 bg-warm-50/80 backdrop-blur-md">
+        <header class="sticky top-0 z-50 border-b border-warm-200 bg-warm-50/80 backdrop-blur-md" data-controller="mobile-menu">
             <nav class="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
                 {# Logo / Name — Serif-Font für Wiedererkennungswert #}
                 <a href="{{ path('app_home') }}" class="font-heading text-xl text-warm-900 transition-colors hover:text-accent-600">
@@ -40,7 +40,6 @@
                 <button
                     type="button"
                     class="rounded-md p-2 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-900 md:hidden"
-                    data-controller="mobile-menu"
                     data-action="click->mobile-menu#toggle"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

@@ -1,0 +1,177 @@
+{# Live Component fuer die Echtzeit-Suche. #}
+{# Bei jeder Eingabe wird getMembers() auf dem Server aufgerufen #}
+{# und nur dieser <div>-Block wird neu gerendert. #}
+<div {{ attributes }}>
+
+    {# --- Suchfeld --- #}
+    {# data-model="query" verbindet dieses Input mit dem PHP-Property $query. #}
+    {# debounce(300) = wartet 300ms nach dem letzten Tastendruck, #}
+    {# bevor der Request zum Server geht. Das spart unnoetige Requests. #}
+    <div class="relative">
+        <input
+            type="search"
+            data-model="debounce(300)|query"
+            placeholder="Mitglieder suchen (Name, E-Mail, Team, Rolle)..."
+            value="{{ query }}"
+            class="w-full rounded-lg border border-warm-300 bg-white py-2.5 pl-10 pr-4 text-sm text-warm-900 placeholder-warm-400 transition-colors focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+        >
+        {# Lupe-Icon (SVG) links im Suchfeld #}
+        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-warm-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+    </div>
+
+    {# --- Ergebnis-Zaehler --- #}
+    {% set members = this.members %}
+    <p class="mt-4 text-sm text-warm-400">
+        {{ members|length }} Mitglied{{ members|length != 1 ? 'er' : '' }} gefunden
+        {% if query is not empty %}
+            fuer &bdquo;{{ query }}&ldquo;
+        {% endif %}
+    </p>
+
+    {# ========== MOBILE: Card-Layout (sichtbar unter lg) ========== #}
+    <div class="mt-4 space-y-4 lg:hidden">
+        {% for member in members %}
+            <div class="rounded-xl border border-warm-200 p-5">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="font-medium text-warm-900">{{ member.name }}</p>
+                        <p class="mt-1 text-sm text-warm-500">{{ member.email }}</p>
+                    </div>
+                    <span class="rounded-full px-2.5 py-0.5 text-xs font-medium
+                        {% if member.role == 'Trainer' %}
+                            bg-amber-50 text-amber-700 border border-amber-200
+                        {% elseif member.role == 'Betreuer' %}
+                            bg-purple-50 text-purple-700 border border-purple-200
+                        {% else %}
+                            bg-accent-600/5 text-accent-700 border border-accent-600/20
+                        {% endif %}
+                    ">
+                        {{ member.role }}
+                    </span>
+                </div>
+
+                <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-400">
+                    <span>{{ member.team.name }}</span>
+                    {% if member.position %}
+                        <span>&middot; {{ member.position }}</span>
+                    {% endif %}
+                    {% if member.phone %}
+                        <span>&middot; {{ member.phone }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 flex items-center gap-4 border-t border-warm-100 pt-3">
+                    <a href="{{ path('app_club_planner_edit', { id: member.id }) }}" class="text-sm text-warm-500 hover:text-accent-600 transition-colors">
+                        Bearbeiten
+                    </a>
+                    <div data-controller="confirm">
+                        <button type="button" data-action="click->confirm#show" class="text-sm text-warm-400 hover:text-red-600 transition-colors">
+                            Loeschen
+                        </button>
+                        <dialog data-confirm-target="dialog" class="rounded-xl border border-warm-200 bg-white p-0 shadow-xl backdrop:bg-warm-900/40 backdrop:backdrop-blur-sm">
+                            <div class="p-6">
+                                <h3 class="font-heading text-lg text-warm-900">Mitglied loeschen?</h3>
+                                <p class="mt-2 text-sm text-warm-500">
+                                    <strong>{{ member.name }}</strong> wird unwiderruflich geloescht.
+                                </p>
+                                <div class="mt-6 flex items-center justify-end gap-3">
+                                    <button type="button" data-action="click->confirm#close" class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                                        Abbrechen
+                                    </button>
+                                    <form method="post" action="{{ path('app_club_planner_delete', { id: member.id }) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete-' ~ member.id) }}">
+                                        <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
+                                            Loeschen
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </dialog>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-sm text-warm-400 italic">Keine Mitglieder gefunden.</p>
+        {% endfor %}
+    </div>
+
+    {# ========== DESKTOP: Tabelle (sichtbar ab lg) ========== #}
+    <div class="mt-4 hidden lg:block">
+        <div class="overflow-hidden rounded-xl border border-warm-200">
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-warm-200 bg-warm-100">
+                    <tr>
+                        <th class="px-6 py-3 font-medium text-warm-600">Name</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Email</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Team</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Position</th>
+                        <th class="px-6 py-3 font-medium text-warm-600">Rolle</th>
+                        <th class="px-6 py-3 font-medium text-warm-600 text-right">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-warm-200">
+                    {% for member in members %}
+                        <tr class="transition-colors hover:bg-warm-50">
+                            <td class="px-6 py-4 font-medium text-warm-900">{{ member.name }}</td>
+                            <td class="px-6 py-4 text-warm-500">{{ member.email }}</td>
+                            <td class="px-6 py-4 text-warm-500">{{ member.team.name }}</td>
+                            <td class="px-6 py-4 text-warm-500">{{ member.position ?? '—' }}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium
+                                    {% if member.role == 'Trainer' %}
+                                        bg-amber-50 text-amber-700 border border-amber-200
+                                    {% elseif member.role == 'Betreuer' %}
+                                        bg-purple-50 text-purple-700 border border-purple-200
+                                    {% else %}
+                                        bg-accent-600/5 text-accent-700 border border-accent-600/20
+                                    {% endif %}
+                                ">
+                                    {{ member.role }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ path('app_club_planner_edit', { id: member.id }) }}" class="text-sm text-warm-500 hover:text-accent-600 transition-colors">
+                                        Bearbeiten
+                                    </a>
+                                    <div data-controller="confirm">
+                                        <button type="button" data-action="click->confirm#show" class="text-sm text-warm-400 hover:text-red-600 transition-colors">
+                                            Loeschen
+                                        </button>
+                                        <dialog data-confirm-target="dialog" class="rounded-xl border border-warm-200 bg-white p-0 shadow-xl backdrop:bg-warm-900/40 backdrop:backdrop-blur-sm">
+                                            <div class="p-6">
+                                                <h3 class="font-heading text-lg text-warm-900">Mitglied loeschen?</h3>
+                                                <p class="mt-2 text-sm text-warm-500">
+                                                    <strong>{{ member.name }}</strong> wird unwiderruflich geloescht.
+                                                </p>
+                                                <div class="mt-6 flex items-center justify-end gap-3">
+                                                    <button type="button" data-action="click->confirm#close" class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                                                        Abbrechen
+                                                    </button>
+                                                    <form method="post" action="{{ path('app_club_planner_delete', { id: member.id }) }}">
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('delete-' ~ member.id) }}">
+                                                        <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
+                                                            Loeschen
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </dialog>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-warm-400 italic">
+                                Keine Mitglieder gefunden.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
