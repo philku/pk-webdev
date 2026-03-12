@@ -1,0 +1,65 @@
+{# Dieses Template gehört zur Live Component "MemberForm". #}
+{# Symfony findet es automatisch über den Klassennamen. #}
+
+{# attributes.defaults() rendert die nötigen Live-Component-Attribute #}
+{# (data-controller, data-live-url, etc.) auf das äußere Element. #}
+<div {{ attributes }}>
+
+    {# form_start() erzeugt das <form>-Tag. #}
+    {# data-model="on(change)|*" wird automatisch vom ComponentWithFormTrait gesetzt. #}
+    {# Das bedeutet: Bei jedem change-Event eines Feldes werden die Werte #}
+    {# an den Server geschickt und das Formular wird live validiert. #}
+    {{ form_start(form, { attr: { class: 'space-y-6' } }) }}
+
+        {% for field in form %}
+            {# Versteckte Felder (wie CSRF-Token) überspringen #}
+            {% if field.vars.name != '_token' %}
+                <div>
+                    {# Label #}
+                    {{ form_label(field, null, { label_attr: {
+                        class: 'block text-sm font-medium text-warm-700 mb-1'
+                    } }) }}
+
+                    {# Eingabefeld #}
+                    {# Die CSS-Klasse wechselt je nachdem, ob ein Fehler vorliegt: #}
+                    {# - Fehler: roter Rand (border-red-500) #}
+                    {# - Kein Fehler: normaler Rand (border-warm-300) #}
+                    {% set hasError = field.vars.errors|length > 0 %}
+                    {{ form_widget(field, { attr: {
+                        class: 'w-full rounded-lg border px-4 py-2.5 text-sm text-warm-900 placeholder-warm-400 transition-colors focus:outline-none focus:ring-1 '
+                            ~ (hasError
+                                ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500'
+                                : 'border-warm-300 bg-white focus:border-accent-500 focus:ring-accent-500')
+                    } }) }}
+
+                    {# Fehlermeldungen — erscheinen jetzt LIVE, sobald das Feld #}
+                    {# den Fokus verliert und der Server die Validierung zurückschickt. #}
+                    {% if hasError %}
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ form_errors(field) }}
+                        </p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {# Buttons #}
+        <div class="flex items-center gap-4 pt-4">
+            {# data-action="live#action" sagt dem Live Component: #}
+            {# "Wenn dieser Button geklickt wird, rufe die save()-Methode auf." #}
+            {# data-live-action-param="save" = der Name der PHP-Methode. #}
+            <button
+                type="button"
+                data-action="live#action"
+                data-live-action-param="save"
+                class="rounded-lg bg-warm-900 px-6 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700"
+            >
+                Speichern
+            </button>
+            <a href="{{ path('app_club_planner') }}" class="text-sm text-warm-500 hover:text-warm-700 transition-colors">
+                Abbrechen
+            </a>
+        </div>
+
+    {{ form_end(form) }}
+</div>
