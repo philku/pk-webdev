@@ -1,16 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="de" class="scroll-smooth">
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Philipp Kuchau{% endblock %} | Webentwicklung</title>
+
+        {# Google Fonts: DM Serif Display (Headlines) + DM Sans (Body) #}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+
         {% block stylesheets %}
+            <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
         {% endblock %}
 
         {% block javascripts %}
+            {{ importmap('app') }}
         {% endblock %}
     </head>
-    <body>
-        {% block body %}{% endblock %}
+    <body class="min-h-screen bg-warm-50 text-warm-800 antialiased">
+
+        {# ========== NAVIGATION ========== #}
+        <header class="sticky top-0 z-50 border-b border-warm-200 bg-warm-50/80 backdrop-blur-md">
+            <nav class="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+                {# Logo / Name — Serif-Font für Wiedererkennungswert #}
+                <a href="{{ path('app_home') }}" class="font-heading text-xl text-warm-900 transition-colors hover:text-accent-600">
+                    PK
+                </a>
+
+                {# Desktop Navigation #}
+                <ul class="hidden items-center gap-8 md:flex">
+                    <li><a href="{{ path('app_home') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Home</a></li>
+                    <li><a href="{{ path('app_about') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Über mich</a></li>
+                    <li><a href="{{ path('app_demos') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Tech Demos</a></li>
+                    <li><a href="{{ path('app_contact') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Kontakt</a></li>
+                </ul>
+
+                {# Mobile Hamburger Button #}
+                <button
+                    type="button"
+                    class="rounded-md p-2 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-900 md:hidden"
+                    data-controller="mobile-menu"
+                    data-action="click->mobile-menu#toggle"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                </button>
+            </nav>
+
+            {# Mobile Navigation #}
+            <div class="hidden border-t border-warm-200 md:hidden" data-mobile-menu-target="menu">
+                <ul class="space-y-1 px-6 py-4">
+                    <li><a href="{{ path('app_home') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Home</a></li>
+                    <li><a href="{{ path('app_about') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Über mich</a></li>
+                    <li><a href="{{ path('app_demos') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Tech Demos</a></li>
+                    <li><a href="{{ path('app_contact') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Kontakt</a></li>
+                </ul>
+            </div>
+        </header>
+
+        {# ========== HAUPTINHALT ========== #}
+        <main class="mx-auto max-w-4xl px-6 py-20">
+            {% block body %}{% endblock %}
+        </main>
+
+        {# ========== FOOTER ========== #}
+        <footer class="border-t border-warm-200">
+            <div class="mx-auto max-w-4xl px-6 py-10">
+                <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
+                    <p class="text-sm text-warm-400">
+                        &copy; {{ 'now'|date('Y') }} Philipp Kuchau
+                    </p>
+                    <p class="text-sm text-warm-400">
+                        Symfony &middot; Tailwind CSS &middot; Turbo
+                    </p>
+                </div>
+            </div>
+        </footer>
     </body>
 </html>

@@ -1,5 +1,73 @@
 @import "tailwindcss";
 
+/* ==============================
+   CUSTOM THEME
+   Tailwind v4: Theme-Anpassungen direkt in CSS via @theme
+   Hier definieren wir eigene Farben, Fonts und Design-Tokens,
+   die wir dann überall als Tailwind-Klassen nutzen können
+   (z.B. text-warm-900, font-heading, bg-accent-500)
+   ============================== */
+@theme {
+    /* Typografie: Serif für Headlines, Sans für Body */
+    --font-heading: "DM Serif Display", serif;
+    --font-body: "DM Sans", sans-serif;
+
+    /* Warme Neutraltöne statt kaltem Grau — gibt der Seite Charakter */
+    --color-warm-50: #FAF9F7;
+    --color-warm-100: #F0EEEB;
+    --color-warm-200: #E2DFDA;
+    --color-warm-300: #C8C3BB;
+    --color-warm-400: #A39E94;
+    --color-warm-500: #787169;
+    --color-warm-600: #5C564F;
+    --color-warm-700: #3D3935;
+    --color-warm-800: #252320;
+    --color-warm-900: #171614;
+
+    /* Akzentfarbe: Teal — edel, nicht zu grell */
+    --color-accent-400: #2DD4BF;
+    --color-accent-500: #14B8A6;
+    --color-accent-600: #0D9488;
+    --color-accent-700: #0F766E;
+    --color-accent-800: #115E59;
+}
+
+/* ==============================
+   BASE STYLES
+   ============================== */
 body {
-    background-color: skyblue;
+    font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+}
+
+/* Markierter Text bekommt unsere Akzentfarbe */
+::selection {
+    background-color: var(--color-accent-400);
+    color: var(--color-warm-900);
+}
+
+/* ==============================
+   NAV-LINK ANIMATION
+   Sanftes Unterstreichen von links nach rechts bei Hover
+   ============================== */
+.nav-link {
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: var(--color-warm-900);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+    width: 100%;
 }
