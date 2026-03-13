@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+    Metallica — {{ setlist.venue.name ?? 'Konzert' }} ({{ setlist.eventDate ?? '' }})
+{% endblock %}
+
+{% block body %}
+    <section class="py-12">
+        <a href="{{ path('app_metallica') }}" class="text-sm text-accent-600 hover:text-accent-700 transition-colors">
+            &larr; Zurueck zur Karte
+        </a>
+
+        <h1 class="mt-6 font-heading text-4xl text-warm-900">
+            {{ setlist.venue.name ?? 'Unbekanntes Venue' }}
+        </h1>
+        <p class="mt-2 text-warm-500">
+            {{ setlist.venue.city.name ?? '' }}{% if setlist.venue.city.country.name is defined %}, {{ setlist.venue.city.country.name }}{% endif %}
+            &middot; {{ setlist.eventDate ?? '' }}
+        </p>
+        {% if setlist.tour.name is defined %}
+            <p class="mt-1 text-sm text-accent-600">{{ setlist.tour.name }}</p>
+        {% endif %}
+    </section>
+
+    {# --- Setlist --- #}
+    <section class="pb-12">
+        {% set sets = setlist.sets.set ?? [] %}
+
+        {% if sets is empty %}
+            <p class="text-warm-400 italic">Keine Setlist-Daten verfuegbar fuer dieses Konzert.</p>
+        {% else %}
+            {% for set in sets %}
+                <div class="mb-8">
+                    {# Set-Name (z.B. "Set 1:", "Encore:") #}
+                    <h2 class="font-heading text-xl text-warm-900">
+                        {% if set.name is defined and set.name is not empty %}
+                            {{ set.name }}
+                        {% elseif set.encore is defined and set.encore %}
+                            Encore
+                        {% else %}
+                            Set {{ loop.index }}
+                        {% endif %}
+                    </h2>
+
+                    <ol class="mt-3 space-y-1">
+                        {% for song in set.song ?? [] %}
+                            <li class="flex items-baseline gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-warm-50">
+                                {# Song-Nummer #}
+                                <span class="w-6 shrink-0 text-right text-sm text-warm-400">{{ loop.index }}.</span>
+
+                                <div>
+                                    {# Song-Name #}
+                                    <span class="font-medium text-warm-900">{{ song.name }}</span>
+
+                                    {# Cover-Info: wenn der Song von einer anderen Band ist #}
+                                    {% if song.cover is defined %}
+                                        <span class="ml-2 text-xs text-warm-400">({{ song.cover.name }} Cover)</span>
+                                    {% endif %}
+
+                                    {# Tape = vom Band abgespielt, nicht live #}
+                                    {% if song.tape is defined and song.tape %}
+                                        <span class="ml-2 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">Tape</span>
+                                    {% endif %}
+
+                                    {# Zusatzinfo (z.B. "with extended solo") #}
+                                    {% if song.info is defined and song.info is not empty %}
+                                        <p class="mt-0.5 text-xs text-warm-400 italic">{{ song.info }}</p>
+                                    {% endif %}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            {% endfor %}
+
+            {# Gesamtzahl Songs #}
+            {% set totalSongs = 0 %}
+            {% for set in sets %}
+                {% set totalSongs = totalSongs + (set.song ?? [])|length %}
+            {% endfor %}
+            <p class="mt-4 text-sm text-warm-400">
+                {{ totalSongs }} Songs in {{ sets|length }} Set{{ sets|length != 1 ? 's' : '' }}
+            </p>
+        {% endif %}
+
+        {# Link zur Original-Setlist auf setlist.fm #}
+        {% if setlist.url is defined %}
+            <a href="{{ setlist.url }}" target="_blank" rel="noopener"
+               class="mt-6 inline-block text-sm text-warm-400 hover:text-warm-600 transition-colors">
+                Auf setlist.fm ansehen &nearr;
+            </a>
+        {% endif %}
+    </section>
+{% endblock %}

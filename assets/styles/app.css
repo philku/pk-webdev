@@ -102,3 +102,159 @@ dialog[open] {
         transform: scale(1) translateY(0);
     }
 }
+
+/* ==============================
+   LEAFLET POPUP — WARM THEME
+   Leaflet's Standard-Popups sehen generisch aus.
+   Hier überschreiben wir die Styles damit sie zum
+   Warm-Theme der Seite passen.
+   ============================== */
+
+/* Popup-Container: abgerundete Ecken, warmer Hintergrund, weicher Schatten */
+.metallica-popup .leaflet-popup-content-wrapper {
+    background: var(--color-warm-50);
+    color: var(--color-warm-900);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(23, 22, 20, 0.12);
+    border: 1px solid var(--color-warm-200);
+    font-family: var(--font-body);
+    padding: 0;
+}
+
+.metallica-popup .leaflet-popup-content {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Pfeil unter dem Popup passend einfärben */
+.metallica-popup .leaflet-popup-tip {
+    background: var(--color-warm-50);
+    border: 1px solid var(--color-warm-200);
+    border-top: none;
+    border-left: none;
+}
+
+/* Schließen-Button dezenter */
+.metallica-popup .leaflet-popup-close-button {
+    color: var(--color-warm-400);
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 6px;
+    right: 6px;
+}
+
+.metallica-popup .leaflet-popup-close-button:hover {
+    color: var(--color-warm-900);
+}
+
+/* --- Popup-Inhalte --- */
+.metallica-popup-content {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.metallica-popup-venue {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    color: var(--color-warm-900);
+    line-height: 1.3;
+}
+
+.metallica-popup-location {
+    font-size: 13px;
+    color: var(--color-warm-500);
+}
+
+.metallica-popup-date {
+    font-size: 13px;
+    color: var(--color-warm-400);
+}
+
+.metallica-popup-tour {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--color-accent-600);
+}
+
+.metallica-popup-songs {
+    font-size: 12px;
+    color: var(--color-warm-400);
+}
+
+.metallica-popup-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-accent-600);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.metallica-popup-link:hover {
+    color: var(--color-accent-700);
+}
+
+/* Anzahl Konzerte am Ort */
+.metallica-popup-count {
+    font-size: 12px;
+    color: var(--color-warm-400);
+    padding-bottom: 4px;
+}
+
+/* Scrollbare Liste bei mehreren Konzerten am gleichen Ort */
+.metallica-popup-list {
+    max-height: 180px;
+    overflow-y: auto;
+    border-top: 1px solid var(--color-warm-200);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+/* Einzelner Listeneintrag — klickbar, mit Hover-Effekt */
+.metallica-popup-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 4px;
+    border-bottom: 1px solid var(--color-warm-100);
+    text-decoration: none;
+    transition: background-color 0.15s;
+    border-radius: 4px;
+}
+
+.metallica-popup-item:last-child {
+    border-bottom: none;
+}
+
+.metallica-popup-item:hover {
+    background-color: var(--color-warm-100);
+}
+
+.metallica-popup-item-date {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-warm-900);
+    white-space: nowrap;
+}
+
+.metallica-popup-item-tour {
+    font-size: 12px;
+    color: var(--color-warm-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.metallica-popup-item-songs {
+    font-size: 11px;
+    color: var(--color-warm-400);
+    margin-left: auto;
+    white-space: nowrap;
+}
