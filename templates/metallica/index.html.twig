@@ -16,8 +16,8 @@
         </p>
         <h1 class="mt-3 font-heading text-4xl text-warm-900">Metallica Universe</h1>
         <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
-            Alle Metallica-Konzerte weltweit auf einer interaktiven Karte.
-            Daten von der setlist.fm API, Karte mit Leaflet &amp; OpenStreetMap.
+            Konzerte weltweit, Discography und Live-Statistiken.
+            Daten von setlist.fm und Spotify APIs.
         </p>
     </section>
 
@@ -71,62 +71,110 @@
             {# Die eigentliche Karte — anfangs versteckt, Controller blendet sie ein #}
             <div data-metallica-map-target="mapContainer"
                  class="hidden h-[500px] rounded-xl border border-warm-200 sm:h-[600px]"></div>
+
+            {# Progress Bar — zeigt den Fortschritt beim seitenweisen Laden.
+                 Erscheint unterhalb der Karte sobald Seite 1 da ist,
+                 verschwindet wenn alle Seiten geladen sind.
+                 Drei Targets: Wrapper (progress), Balken (progressBar), Text (progressText) #}
+            <div data-metallica-map-target="progress"
+                 class="hidden mt-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-2 rounded-full bg-warm-200 overflow-hidden">
+                        <div data-metallica-map-target="progressBar"
+                             class="h-full rounded-full bg-accent-600 transition-all duration-300"
+                             style="width: 0%"></div>
+                    </div>
+                    <span data-metallica-map-target="progressText"
+                          class="text-xs text-warm-500 whitespace-nowrap"></span>
+                </div>
+            </div>
         </section>
 
         {# --- Konzertliste unter der Karte --- #}
-        <section class="mt-8 pb-12">
+        <section class="mt-8">
             <h2 class="font-heading text-2xl text-warm-900">Letzte Konzerte</h2>
             <div data-metallica-map-target="concertList" class="mt-4 space-y-3">
                 {# Wird vom Controller befuellt #}
             </div>
         </section>
 
-        {# --- Mobile Bottom Sheet ---
-             Auf Mobilgeräten sind Leaflet-Popups schlecht bedienbar:
-             zu klein, schwer zu scrollen, winzige Touch-Targets.
-             Stattdessen zeigen wir ein Bottom Sheet (wie Google Maps),
-             das vom unteren Bildschirmrand hochslided.
-             Wird nur auf Screens < 640px (sm Breakpoint) benutzt.
-
-             WICHTIG: Backdrop und Sheet sind GETRENNTE Elemente!
-             Backdrop darf NICHT innerhalb eines transform-Parents liegen,
-             weil CSS "fixed" innerhalb eines transformierten Elements
-             sich nicht mehr auf den Viewport bezieht, sondern auf den Parent.
-             → Backdrop wäre verschoben und würde hinter den Rundungen durchscheinen.
-        #}
-
-        {# Backdrop — eigenes Element, nicht im Sheet-Wrapper!
-             Liegt direkt auf dem Viewport (fixed inset-0) ohne transformierten Parent.
-             Klick/Tap darauf schließt das Sheet. #}
+        {# --- Mobile Bottom Sheet --- #}
         <div data-metallica-map-target="sheetBackdrop"
              data-action="click->metallica-map#closeSheet"
              class="fixed inset-0 z-[999] bg-warm-900/40 opacity-0 pointer-events-none transition-opacity duration-300 sm:hidden"></div>
 
-        {# Sheet-Container — slided von unten rein.
-             Kann per Swipe nach unten geschlossen werden (Touch-Events im Controller). #}
         <div data-metallica-map-target="bottomSheet"
              class="fixed inset-x-0 bottom-0 z-[1000] translate-y-full transition-transform duration-300 ease-out sm:hidden">
             <div class="rounded-t-2xl bg-warm-50 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] max-h-[70vh] flex flex-col">
-                {# Drag-Handle — visueller Hinweis + Swipe-Bereich #}
                 <div class="flex justify-center pt-3 pb-1 cursor-grab"
                      data-action="touchstart->metallica-map#onSwipeStart touchmove->metallica-map#onSwipeMove touchend->metallica-map#onSwipeEnd">
                     <div class="h-1 w-10 rounded-full bg-warm-300"></div>
                 </div>
-
-                {# Header: Venue-Name + Stadt #}
                 <div class="px-5 pb-3 border-b border-warm-200">
                     <h3 data-metallica-map-target="sheetTitle"
                         class="font-heading text-lg text-warm-900"></h3>
                     <p data-metallica-map-target="sheetSubtitle"
                        class="text-sm text-warm-500 mt-0.5"></p>
                 </div>
-
-                {# Konzert-Liste — scrollbar bei vielen Einträgen #}
                 <div data-metallica-map-target="sheetList"
                      class="overflow-y-auto overscroll-contain px-5 py-3 space-y-1">
-                    {# Wird vom Controller befuellt #}
                 </div>
             </div>
         </div>
     </div>
+
+    {# ========== MEISTGESPIELTE SONGS ========== #}
+    <section class="mt-10 pb-12"
+             data-controller="metallica-discography"
+             data-metallica-discography-url-value="{{ path('app_metallica_discography_stats') }}">
+        <h2 class="font-heading text-2xl text-warm-900">Meistgespielte Songs live</h2>
+        <p class="mt-2 text-xs text-warm-400">
+            Top 20 — basierend auf setlist.fm Konzertdaten
+        </p>
+        <div data-metallica-discography-target="playedContainer" class="mt-4">
+            <canvas data-metallica-discography-target="playedChart"></canvas>
+        </div>
+    </section>
+
+    {# ========== DISCOGRAPHY ========== #}
+    <section class="pb-16">
+        <h2 class="font-heading text-2xl text-warm-900">Discography</h2>
+        <p class="mt-2 text-sm text-warm-500">
+            Alle Studio-Alben — Daten von der Spotify API.
+        </p>
+
+        <p class="mt-2 text-sm text-warm-500">
+            {{ albums|length }} Studio-Alben — Daten von der Spotify API.
+        </p>
+
+        {# Album Grid #}
+        <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {% for album in albums %}
+                <a href="{{ path('app_metallica_album', {id: album.id}) }}"
+                   class="group rounded-xl border border-warm-200 overflow-hidden transition-all hover:border-accent-500 hover:shadow-lg hover:shadow-accent-500/5">
+                    {% if album.image %}
+                        <div class="aspect-square overflow-hidden bg-warm-100">
+                            <img src="{{ album.image }}"
+                                 alt="{{ album.name }}"
+                                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                 loading="lazy">
+                        </div>
+                    {% else %}
+                        <div class="aspect-square bg-warm-200 flex items-center justify-center">
+                            <span class="text-warm-400 text-sm">Kein Cover</span>
+                        </div>
+                    {% endif %}
+                    <div class="p-3">
+                        <h3 class="font-heading text-sm text-warm-900 leading-tight truncate">
+                            {{ album.name }}
+                        </h3>
+                        <p class="mt-1 text-xs text-warm-500">
+                            {{ album.release_date[:4] }} · {{ album.total_tracks }} Tracks
+                        </p>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
 {% endblock %}

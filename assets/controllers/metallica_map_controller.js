@@ -45,6 +45,10 @@ export default class extends Controller {
         'statCountries',
         'statCities',
         'statYears',
+        // Progress Bar Targets — zeigen den Ladefortschritt beim progressiven Laden
+        'progress',
+        'progressBar',
+        'progressText',
         // Mobile Bottom Sheet Targets
         'bottomSheet',
         'sheetBackdrop',
@@ -75,6 +79,12 @@ export default class extends Controller {
     }
 
     disconnect() {
+        // Laufende fetch-Requests abbrechen wenn der User per Turbo
+        // wegnavigiert. Ohne das würde der Loading-Loop weiterlaufen
+        // und Fehler werfen weil die DOM-Elemente nicht mehr existieren.
+        if (this.abortController) {
+            this.abortController.abort();
+        }
         if (this.map) {
             this.map.remove();
             this.map = null;
@@ -89,29 +99,112 @@ export default class extends Controller {
         return window.innerWidth < 640;
     }
 
-    // --- Konzertdaten vom Server holen und auf der Karte anzeigen ---
+    // --- Konzertdaten laden: Full-Cache oder progressiv ---
+    // Ablauf:
+    //   1. Erster Request OHNE ?page → Backend prüft ob Full-Cache existiert
+    //   2a. complete: true  → Alle 2000+ Konzerte auf einen Schlag (aus Full-Cache)
+    //   2b. complete: false → Nur Seite 1 kam zurück, Rest wird progressiv nachgeladen
+    //   3. Wenn alle Seiten geladen → Backend baut automatisch den Full-Cache
+    //   4. Nächster Besuch → Schritt 2a (alles sofort da)
     async loadConcerts() {
-        try {
-            const response = await fetch(this.urlValue);
-            const concerts = await response.json();
+        this.abortController = new AbortController();
+        this.allConcerts = [];
 
-            // Loading-Spinner ausblenden, Karte einblenden
+        try {
+            // --- Schritt 1: Initialer Request ohne ?page ---
+            // Das Backend entscheidet: Full-Cache vorhanden → alles auf einmal,
+            // sonst → erste Seite + complete: false
+            const initialData = await this.fetchUrl(this.urlValue);
+
+            // Spinner weg, Karte da
             this.loadingTarget.classList.add('hidden');
             this.mapContainerTarget.classList.remove('hidden');
-
-            // Leaflet muss die Größe neu berechnen, weil die Karte
-            // vorher display:none war (hidden-Klasse).
             this.map.invalidateSize();
 
-            this.updateStats(concerts);
-            this.addMarkers(concerts);
-            this.renderConcertList(concerts);
+            // --- Schritt 2a: Full-Cache → sofort fertig ---
+            if (initialData.complete) {
+                this.allConcerts = initialData.concerts;
+                this.refreshMap();
+                return; // Fertig! Kein progressives Laden nötig.
+            }
+
+            // --- Schritt 2b: Kein Full-Cache → progressive Loading ---
+            // Erste Seite (20 Konzerte) sofort anzeigen
+            this.allConcerts = [...initialData.concerts];
+            this.refreshMap();
+
+            const totalPages = initialData.totalPages;
+
+            if (totalPages > 1) {
+                this.showProgress(1, totalPages, initialData.total);
+
+                // Restliche Seiten sequenziell nachladen.
+                // Sequenziell (nicht parallel) wegen setlist.fm Rate Limit (~2 Req/Sek).
+                for (let page = 2; page <= totalPages; page++) {
+                    const data = await this.fetchPage(page);
+
+                    this.allConcerts.push(...data.concerts);
+                    this.refreshMap();
+                    this.showProgress(page, totalPages, initialData.total);
+                }
+
+                // Alles geladen — Progress Bar ausblenden.
+                // Der Full-Cache wurde serverseitig automatisch gebaut
+                // als die letzte Seite angefragt wurde.
+                this.hideProgress();
+            }
         } catch (error) {
+            if (error.name === 'AbortError') return;
+
             this.loadingTarget.innerHTML = `
                 <p class="text-sm text-red-600">Fehler beim Laden der Konzertdaten.</p>
             `;
             console.error('Fehler:', error);
         }
+    }
+
+    // --- Beliebige URL fetchen (mit AbortController-Support) ---
+    // Wird für den initialen Request ohne ?page benutzt.
+    async fetchUrl(url) {
+        const response = await fetch(url, {
+            signal: this.abortController.signal,
+        });
+        return response.json();
+    }
+
+    // --- Eine bestimmte Seite Konzertdaten vom Server holen ---
+    // Gibt ein Objekt zurück: { concerts: [...], page: 1, totalPages: 109, total: 2177 }
+    async fetchPage(page) {
+        return this.fetchUrl(`${this.urlValue}?page=${page}`);
+    }
+
+    // --- Karte komplett neu aufbauen mit allen bisher geladenen Konzerten ---
+    // Wird nach jeder neuen Seite aufgerufen. Leaflet's clearLayers() +
+    // neu addMarkers() ist performanter als einzelne Marker zu tracken,
+    // weil die Gruppierung nach Ort (gleiche lat/lng) sich ändert.
+    refreshMap() {
+        this.markers.clearLayers();
+        this.addMarkers(this.allConcerts);
+        this.updateStats(this.allConcerts);
+        this.renderConcertList(this.allConcerts);
+    }
+
+    // --- Fortschrittsbalken anzeigen ---
+    showProgress(currentPage, totalPages, total) {
+        this.progressTarget.classList.remove('hidden');
+
+        // Prozent berechnen für die Breite des Balkens
+        const percent = Math.round((currentPage / totalPages) * 100);
+        this.progressBarTarget.style.width = `${percent}%`;
+
+        // Text: "985 von ~2.177 Konzerten geladen"
+        this.progressTextTarget.textContent =
+            `${this.allConcerts.length.toLocaleString('de-DE')} von ~${total.toLocaleString('de-DE')} Konzerten`;
+    }
+
+    // --- Fortschrittsbalken ausblenden ---
+    hideProgress() {
+        this.progressTarget.classList.add('hidden');
     }
 
     // --- Statistik-Kacheln befüllen ---
@@ -334,7 +427,7 @@ export default class extends Controller {
     renderConcertList(concerts) {
         const sorted = this.sortByDate(concerts);
 
-        this.concertListTarget.innerHTML = sorted.slice(0, 10).map(concert => `
+        this.concertListTarget.innerHTML = sorted.slice(0, 5).map(concert => `
             <a href="/metallica/setlist/${concert.id}"
                class="flex items-center justify-between rounded-xl border border-warm-200 p-4 transition-colors hover:border-accent-500 hover:bg-warm-50">
                 <div>

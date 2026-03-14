@@ -100,67 +100,204 @@ class SetlistFmService
     }
 
     /**
-     * Holt ALLE Setlists (alle Seiten) und gibt nur die Daten zurück,
-     * die wir für die Karte brauchen: Koordinaten, Datum, Venue, Tour.
-     * Das wird einmalig gecacht und dann für die Kartenansicht benutzt.
+     * Prüft ob der volle Konzert-Cache existiert (alle Seiten zusammen).
+     * Gibt das Array zurück wenn ja, null wenn nein.
      *
-     * @return array<int, array{lat: float, lng: float, date: string, venue: string, city: string, country: string, tour: string, id: string}>
+     * Trick: CacheInterface::get() ruft den Callback NUR bei Cache-Miss auf.
+     * Über die &$found Variable erkennen wir ob es ein Hit oder Miss war.
+     * Bei Miss setzen wir $save = false, damit nichts Sinnloses gecacht wird.
+     * (Der bool &$save Parameter ist seit Symfony 6.2 verfügbar.)
      */
-    public function getAllConcertsForMap(): array
+    public function getFullMapCacheIfAvailable(): ?array
     {
-        return $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item) {
-            // Längerer Cache für die Gesamtliste (6 Stunden),
-            // weil wir hier viele API-Calls machen müssen.
+        $found = true;
+
+        $result = $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item, bool &$save) use (&$found) {
+            $found = false;
+            $save = false; // Nichts cachen bei Miss — wir wollen nur prüfen
+            return null;
+        });
+
+        return $found ? $result : null;
+    }
+
+    /**
+     * Baut den vollen Cache aus den einzelnen Seiten-Caches zusammen.
+     * Wird aufgerufen wenn die LETZTE Seite geladen wurde — dann existieren
+     * alle Einzelseiten im Cache und wir können sie ohne API-Calls zusammensetzen.
+     * Beim nächsten Besuch kommt dann alles auf einen Schlag aus diesem Cache.
+     */
+    public function buildFullMapCache(int $totalPages): void
+    {
+        // Alten Full-Cache löschen falls vorhanden
+        $this->cache->delete('setlistfm_metallica_all_map');
+
+        // Neuen Full-Cache aus den Seiten-Caches zusammenbauen.
+        // getMapConcertsPage() liest aus dem Cache (kein API-Call),
+        // weil jede Seite bereits beim progressiven Laden gecacht wurde.
+        $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item) use ($totalPages) {
+            $item->expiresAfter(21600); // 6 Stunden, wie die Einzelseiten
+
+            $allConcerts = [];
+            for ($page = 1; $page <= $totalPages; $page++) {
+                $pageData = $this->getMapConcertsPage($page);
+                array_push($allConcerts, ...$pageData['concerts']);
+            }
+
+            return $allConcerts;
+        });
+
+        // Song Play Counts aus den per-page Song-Caches zusammenbauen.
+        // Jede Seite hat ihre eigenen Song-Counts (gecacht in cacheSongCountsForPage),
+        // hier aggregieren wir sie zu einem Gesamt-Ranking.
+        $this->cache->delete('setlistfm_song_play_counts');
+
+        $this->cache->get('setlistfm_song_play_counts', function (ItemInterface $item) use ($totalPages) {
             $item->expiresAfter(21600);
 
-            $concerts = [];
-            $page = 1;
-            $totalPages = 1;
-
-            // Seite für Seite durchgehen bis alle Konzerte geladen sind.
-            // Die API liefert 20 Setlists pro Seite.
-            do {
-                $result = $this->fetchPage($page);
-                $totalPages = (int) ceil(($result['total'] ?? 0) / ($result['itemsPerPage'] ?? 20));
-
-                foreach ($result['setlist'] ?? [] as $setlist) {
-                    $venue = $setlist['venue'] ?? [];
-                    $city = $venue['city'] ?? [];
-                    $coords = $city['coords'] ?? [];
-
-                    // Nur Konzerte mit Koordinaten auf die Karte setzen
-                    if (!empty($coords['lat']) && !empty($coords['long'])) {
-                        $concerts[] = [
-                            'id' => $setlist['id'],
-                            'lat' => (float) $coords['lat'],
-                            'lng' => (float) $coords['long'],
-                            'date' => $setlist['eventDate'] ?? '',
-                            'venue' => $venue['name'] ?? 'Unbekannt',
-                            'city' => $city['name'] ?? '',
-                            'country' => $city['country']['name'] ?? '',
-                            'tour' => $setlist['tour']['name'] ?? '',
-                            'songCount' => $this->countSongs($setlist),
-                        ];
-                    }
+            $allCounts = [];
+            for ($page = 1; $page <= $totalPages; $page++) {
+                // Per-page Song-Counts aus dem Cache lesen
+                $pageCounts = $this->getSongCountsForPage($page);
+                foreach ($pageCounts as $song => $count) {
+                    $allCounts[$song] = ($allCounts[$song] ?? 0) + $count;
                 }
+            }
 
-                $page++;
+            arsort($allCounts);
 
-                // Pause zwischen den Requests um das Rate Limit nicht zu sprengen.
-                // setlist.fm erlaubt ca. 2 Requests/Sekunde.
-                // 1 Sekunde ist sicherer als 0.5s — bei 100+ Seiten
-                // summieren sich kleine Überschreitungen schnell.
-                if ($page <= $totalPages) {
-                    sleep(1);
-                }
-            } while ($page <= $totalPages);
-
-            return $concerts;
+            return $allCounts;
         });
     }
 
     /**
-     * Direkter API-Call ohne Cache (wird intern von getAllConcertsForMap benutzt).
+     * Liest die Song-Counts für eine einzelne Seite aus dem Cache.
+     * Gibt leeres Array zurück wenn nicht gecacht.
+     */
+    private function getSongCountsForPage(int $page): array
+    {
+        $found = true;
+
+        $result = $this->cache->get('setlistfm_songs_page_' . $page, function (ItemInterface $item, bool &$save) use (&$found) {
+            $found = false;
+            $save = false;
+            return [];
+        });
+
+        return $found ? $result : [];
+    }
+
+    /**
+     * Holt EINE Seite Konzertdaten im Kartenformat (Koordinaten, Venue, etc.).
+     * Jede Seite wird einzeln gecacht — so kann das Frontend Seite für Seite
+     * laden und die Karte progressiv befüllen, statt 2 Minuten auf alles zu warten.
+     *
+     * @return array{concerts: array, page: int, totalPages: int, total: int}
+     */
+    public function getMapConcertsPage(int $page): array
+    {
+        // Jede Seite hat ihren eigenen Cache-Key.
+        // Seite 1 wird beim ersten Aufruf gecacht, Seite 2 beim zweiten, usw.
+        // So zahlt jeder Request nur für EINE API-Seite (~1 Sekunde),
+        // nicht für alle 100+ Seiten auf einmal.
+        $cacheKey = 'setlistfm_map_page_' . $page;
+
+        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($page) {
+            // 6 Stunden Cache wie vorher — Konzertdaten ändern sich selten
+            $item->expiresAfter(21600);
+
+            // Eine Seite von der setlist.fm API holen (mit Retry-Logik)
+            $result = $this->fetchPage($page);
+
+            // Gesamtzahl und Seiten berechnen — das Frontend braucht totalPages
+            // um zu wissen, wie viele weitere Requests es machen muss.
+            $total = $result['total'] ?? 0;
+            $itemsPerPage = $result['itemsPerPage'] ?? 20;
+            $totalPages = (int) ceil($total / $itemsPerPage);
+
+            // Setlists ins Kartenformat umwandeln (nur Koordinaten + Metadaten)
+            $concerts = $this->transformSetlistsForMap($result['setlist'] ?? []);
+
+            // Song-Counts aus den Roh-Daten extrahieren und separat cachen.
+            // Die Roh-Daten enthalten die Setlists mit Song-Namen — diese Info
+            // geht bei transformSetlistsForMap() verloren. Daher cachen wir die
+            // Song-Zählungen hier als Nebenprodukt, solange die Roh-Daten verfügbar sind.
+            $this->cacheSongCountsForPage($page, $result['setlist'] ?? []);
+
+            return [
+                'concerts' => $concerts,
+                'page' => $page,
+                'totalPages' => $totalPages,
+                'total' => $total,
+            ];
+        });
+    }
+
+    /**
+     * Extrahiert Song-Counts aus den Roh-Setlists einer Seite und cacht sie separat.
+     * Wird von getMapConcertsPage() aufgerufen, wenn die Roh-Daten verfügbar sind.
+     */
+    private function cacheSongCountsForPage(int $page, array $setlists): void
+    {
+        $cacheKey = 'setlistfm_songs_page_' . $page;
+
+        // Falls schon gecacht (z.B. bei erneutem Aufruf), nichts tun
+        $this->cache->get($cacheKey, function (ItemInterface $item) use ($setlists) {
+            $item->expiresAfter(21600);
+
+            $counts = [];
+            foreach ($setlists as $setlist) {
+                foreach ($setlist['sets']['set'] ?? [] as $set) {
+                    foreach ($set['song'] ?? [] as $song) {
+                        $name = $song['name'] ?? '';
+                        if ($name === '') {
+                            continue;
+                        }
+                        $normalized = $this->normalizeSongName($name);
+                        $counts[$normalized] = ($counts[$normalized] ?? 0) + 1;
+                    }
+                }
+            }
+
+            return $counts;
+        });
+    }
+
+    /**
+     * Wandelt rohe Setlist-Daten von der API ins kompakte Kartenformat um.
+     * Wird von getMapConcertsPage() benutzt.
+     * Filtert Konzerte ohne Koordinaten raus (können nicht auf die Karte).
+     */
+    private function transformSetlistsForMap(array $setlists): array
+    {
+        $concerts = [];
+
+        foreach ($setlists as $setlist) {
+            $venue = $setlist['venue'] ?? [];
+            $city = $venue['city'] ?? [];
+            $coords = $city['coords'] ?? [];
+
+            // Nur Konzerte mit Koordinaten — ohne lat/lng kein Marker möglich
+            if (!empty($coords['lat']) && !empty($coords['long'])) {
+                $concerts[] = [
+                    'id' => $setlist['id'],
+                    'lat' => (float) $coords['lat'],
+                    'lng' => (float) $coords['long'],
+                    'date' => $setlist['eventDate'] ?? '',
+                    'venue' => $venue['name'] ?? 'Unbekannt',
+                    'city' => $city['name'] ?? '',
+                    'country' => $city['country']['name'] ?? '',
+                    'tour' => $setlist['tour']['name'] ?? '',
+                    'songCount' => $this->countSongs($setlist),
+                ];
+            }
+        }
+
+        return $concerts;
+    }
+
+    /**
+     * Direkter API-Call ohne Cache (wird intern von getMapConcertsPage benutzt).
      * Enthält Retry-Logik für 429 (Rate Limit) Responses.
      *
      * Warum Retry? setlist.fm erlaubt nur ~2 Requests/Sekunde.
@@ -203,6 +340,44 @@ class SetlistFmService
         }
 
         return []; // Fallback, wird nie erreicht
+    }
+
+    /**
+     * Gibt die aggregierten Song Play Counts zurück.
+     * Wird von buildFullMapCache() als Nebenprodukt aufgebaut,
+     * wenn alle Konzertseiten geladen wurden.
+     *
+     * Ablauf:
+     *   1. getMapConcertsPage() extrahiert Songs pro Seite → cacheSongCountsForPage()
+     *   2. buildFullMapCache() aggregiert alle Seiten → setlistfm_song_play_counts
+     *   3. Diese Methode liest nur noch den fertigen Cache
+     *
+     * @return array<string, int> Song-Name (normalisiert) => Anzahl
+     */
+    public function getSongPlayCounts(): array
+    {
+        // Liest nur aus dem Cache — wenn der noch nicht existiert
+        // (Karte wurde noch nie komplett geladen), kommt ein leeres Array zurück.
+        $found = true;
+
+        $result = $this->cache->get('setlistfm_song_play_counts', function (ItemInterface $item, bool &$save) use (&$found) {
+            $found = false;
+            $save = false;
+            return [];
+        });
+
+        return $found ? $result : [];
+    }
+
+    /**
+     * Normalisiert Song-Namen für den Vergleich zwischen Spotify und setlist.fm.
+     * Entfernt Klammer-Zusätze wie "(Remastered 2021)" und macht lowercase.
+     */
+    private function normalizeSongName(string $name): string
+    {
+        // Klammer-Zusätze entfernen: (Remastered), (Live), (2021 Remaster) etc.
+        $name = preg_replace('/\s*\(.*?\)\s*/', '', $name);
+        return mb_strtolower(trim($name));
     }
 
     /**
