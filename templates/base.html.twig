@@ -36,25 +36,32 @@
                     <li><a href="{{ path('app_contact') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Kontakt</a></li>
                 </ul>
 
-                {# Mobile Hamburger Button #}
+                {# Mobile Hamburger Button — 3 Spans die sich zum X animieren.
+                   Jeder Span ist ein Strich. Beim Öffnen:
+                   - Oben: dreht sich 45° und rutscht zur Mitte
+                   - Mitte: wird unsichtbar (opacity 0)
+                   - Unten: dreht sich -45° und rutscht zur Mitte
+                   Der Controller toggled die Klasse 'open' auf dem Button. #}
                 <button
                     type="button"
-                    class="rounded-md p-2 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-900 md:hidden"
+                    class="group relative h-5 w-5 rounded-md text-warm-500 transition-colors hover:text-warm-900 md:hidden"
                     data-action="click->mobile-menu#toggle"
+                    data-mobile-menu-target="button"
                 >
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                    </svg>
+                    <span class="absolute left-0 top-0.5 h-0.5 w-5 rounded-full bg-current transition-all duration-200 group-[.open]:top-[9px] group-[.open]:rotate-45"></span>
+                    <span class="absolute left-0 top-[9px] h-0.5 w-5 rounded-full bg-current transition-opacity duration-200 group-[.open]:opacity-0"></span>
+                    <span class="absolute left-0 bottom-0.5 h-0.5 w-5 rounded-full bg-current transition-all duration-200 group-[.open]:bottom-[9px] group-[.open]:-rotate-45"></span>
                 </button>
             </nav>
 
-            {# Mobile Navigation #}
-            <div class="hidden border-t border-warm-200 md:hidden" data-mobile-menu-target="menu">
+            {# Mobile Navigation — absolute damit es über dem Content schwebt statt ihn runterzuschieben.
+               left-0 right-0: volle Breite. bg-warm-50 + shadow: saubere Abgrenzung zum Content. #}
+            <div class="hidden absolute left-0 right-0 border-t border-warm-200 bg-warm-50 shadow-lg md:hidden" data-mobile-menu-target="menu">
                 <ul class="space-y-1 px-6 py-4">
-                    <li><a href="{{ path('app_home') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Home</a></li>
-                    <li><a href="{{ path('app_about') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Über mich</a></li>
-                    <li><a href="{{ path('app_demos') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Tech Demos</a></li>
-                    <li><a href="{{ path('app_contact') }}" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Kontakt</a></li>
+                    <li><a href="{{ path('app_home') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Home</a></li>
+                    <li><a href="{{ path('app_about') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Über mich</a></li>
+                    <li><a href="{{ path('app_demos') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Tech Demos</a></li>
+                    <li><a href="{{ path('app_contact') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Kontakt</a></li>
                 </ul>
             </div>
         </header>

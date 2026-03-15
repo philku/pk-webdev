@@ -69,8 +69,11 @@
             </div>
 
             {# Die eigentliche Karte — anfangs versteckt, Controller blendet sie ein #}
+            {# relative z-0 erzeugt einen eigenen Stacking-Context.
+               Ohne das durchbrechen Leaflets interne z-indices (400+)
+               den sticky Header (z-50) und die Karte liegt über der Navigation. #}
             <div data-metallica-map-target="mapContainer"
-                 class="hidden h-[500px] rounded-xl border border-warm-200 sm:h-[600px]"></div>
+                 class="relative z-0 hidden h-[500px] rounded-xl border border-warm-200 sm:h-[600px]"></div>
 
             {# Progress Bar — zeigt den Fortschritt beim seitenweisen Laden.
                  Erscheint unterhalb der Karte sobald Seite 1 da ist,
