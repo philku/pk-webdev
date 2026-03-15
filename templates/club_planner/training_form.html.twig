@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }} — Vereinsplaner{% endblock %}
+
+{% block body %}
+    <section class="py-12">
+        <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
+            Vereinsplaner
+        </p>
+        <h1 class="mt-3 font-heading text-4xl text-warm-900">{{ title }}</h1>
+
+        {# Beim Bearbeiten zeigen wir das Team als Info-Text an (nicht änderbar) #}
+        {% if training is defined %}
+            <p class="mt-2 text-sm text-warm-500">Team: {{ training.team.name }}</p>
+        {% endif %}
+
+        <div class="mt-10 max-w-xl">
+            {# Klassisches Symfony-Form — kein Live Component.
+               Statt form_row() (das Symfony-Default-Styling nutzt) rendern wir
+               Label, Widget und Errors einzeln mit eigenen Tailwind-Klassen.
+               Gleiches Pattern wie bei MemberForm. #}
+            {{ form_start(form, { attr: { class: 'space-y-6' } }) }}
+
+                {% for field in form %}
+                    {% if field.vars.name != '_token' %}
+                        <div>
+                            {{ form_label(field, null, { label_attr: {
+                                class: 'block text-sm font-medium text-warm-700 mb-1'
+                            } }) }}
+
+                            {% set hasError = field.vars.errors|length > 0 %}
+                            {{ form_widget(field, { attr: {
+                                class: 'w-full rounded-lg border px-4 py-2.5 text-sm text-warm-900 placeholder-warm-400 transition-colors focus:outline-none focus:ring-1 '
+                                    ~ (hasError
+                                        ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500'
+                                        : 'border-warm-300 bg-white focus:border-accent-500 focus:ring-accent-500')
+                            } }) }}
+
+                            {% if hasError %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form_errors(field) }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="flex items-center gap-4 pt-4">
+                    <button type="submit" class="rounded-lg bg-warm-900 px-6 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">
+                        Speichern
+                    </button>
+                    <a href="{{ path('app_trainings') }}" class="text-sm text-warm-500 hover:text-warm-700 transition-colors">
+                        Abbrechen
+                    </a>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </section>
+{% endblock %}

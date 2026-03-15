@@ -9,7 +9,7 @@
         </p>
         <h1 class="mt-3 font-heading text-4xl text-warm-900">Vereinsplaner</h1>
         <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
-            Mitgliederverwaltung mit CRUD, Live-Suche und Echtzeit-Validierung.
+            Mitgliederverwaltung mit CRUD, Live-Suche, Echtzeit-Validierung und Trainingsplaner.
         </p>
         {# Flash Messages #}
         {% for message in app.flashes('success') %}
@@ -18,9 +18,12 @@
             </div>
         {% endfor %}
 
-        <div class="mt-8">
+        <div class="mt-8 flex flex-wrap gap-3">
             <a href="{{ path('app_club_planner_new') }}" class="inline-block rounded-lg bg-warm-900 px-5 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">
                 + Neues Mitglied
+            </a>
+            <a href="{{ path('app_trainings') }}" class="inline-block rounded-lg border border-warm-300 px-5 py-2.5 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                Trainingsplaner →
             </a>
         </div>
     </section>

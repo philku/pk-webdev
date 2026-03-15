@@ -4,6 +4,8 @@ namespace App\DataFixtures;
 
 use App\Entity\Member;
 use App\Entity\Team;
+use App\Entity\Training;
+use App\Entity\TrainingAttendance;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -46,6 +48,10 @@ class AppFixtures extends Fixture
             ['Nina Lange', 'nina@example.com', null, null, 'Betreuer', $teamC],
         ];
 
+        // Member-Objekte sammeln, damit wir sie für Attendances wiederverwenden können.
+        // Gruppiert nach Team, weil Attendances teamweise zugeordnet werden.
+        $membersByTeam = [];
+
         foreach ($members as [$name, $email, $phone, $position, $role, $team]) {
             $member = new Member();
             $member->setName($name);
@@ -57,6 +63,52 @@ class AppFixtures extends Fixture
             $member->setJoinedAt(new \DateTime('-' . rand(1, 36) . ' months'));
 
             $manager->persist($member);
+
+            // Member dem Team-Array zuordnen für spätere Attendance-Erstellung
+            $teamId = spl_object_id($team);
+            $membersByTeam[$teamId][] = $member;
+        }
+
+        // --- Trainings erstellen ---
+        // Realistische Daten: ein Mix aus vergangenen und zukünftigen Trainings.
+        $trainings = [
+            // [Team, Tage-Offset, Uhrzeit, Ort, Beschreibung]
+            [$teamA, -14, '18:00', 'Sportplatz Süd', 'Taktiktraining'],
+            [$teamA, -7, '18:00', 'Sportplatz Süd', 'Spielvorbereitung'],
+            [$teamA, 0, '18:30', 'Sporthalle Nord', 'Konditionstraining'],
+            [$teamA, 7, '18:00', 'Sportplatz Süd', 'Freies Training'],
+            [$teamB, -10, '16:30', 'Kunstrasenplatz', 'Techniktraining'],
+            [$teamB, -3, '16:30', 'Kunstrasenplatz', 'Spielformen'],
+        ];
+
+        // Mögliche Status-Werte für die Anwesenheit.
+        // Gewichtung: 60% anwesend, 25% abwesend, 15% entschuldigt — realistisch.
+        $statuses = ['anwesend', 'anwesend', 'anwesend', 'anwesend', 'anwesend', 'anwesend',
+                     'abwesend', 'abwesend', 'abwesend',
+                     'entschuldigt', 'entschuldigt'];
+
+        foreach ($trainings as [$team, $dayOffset, $time, $location, $description]) {
+            $training = new Training();
+            $training->setScheduledAt(new \DateTime("$dayOffset days $time"));
+            $training->setLocation($location);
+            $training->setDescription($description);
+            $training->setTeam($team);
+
+            $manager->persist($training);
+
+            // Für jedes Mitglied im Team einen Anwesenheitseintrag erstellen.
+            // Das passiert auch im echten Controller beim Training-Erstellen:
+            // Alle Team-Mitglieder bekommen automatisch einen Eintrag (default: 'abwesend').
+            $teamId = spl_object_id($team);
+            foreach ($membersByTeam[$teamId] ?? [] as $member) {
+                $attendance = new TrainingAttendance();
+                $attendance->setTraining($training);
+                $attendance->setMember($member);
+                // Zufälliger Status für realistische Demo-Daten
+                $attendance->setStatus($statuses[array_rand($statuses)]);
+
+                $manager->persist($attendance);
+            }
         }
 
         // flush() = "Jetzt alles auf einmal in die DB schreiben."

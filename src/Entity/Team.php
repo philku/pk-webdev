@@ -34,10 +34,18 @@ class Team
     #[ORM\OneToMany(targetEntity: Member::class, mappedBy: 'team', cascade: ['persist'], orphanRemoval: true)]
     private Collection $members;
 
+    // OneToMany zu Training — ein Team hat viele Trainingseinheiten.
+    // Gleiche Struktur wie $members, aber ohne orphanRemoval:
+    // Trainings löschen wir explizit über den Controller (mit CSRF-Schutz).
+    /** @var Collection<int, Training> */
+    #[ORM\OneToMany(targetEntity: Training::class, mappedBy: 'team')]
+    private Collection $trainings;
+
     public function __construct()
     {
         // ArrayCollection ist Doctrines "intelligente Liste" — wie ein Array, aber mit Extras.
         $this->members = new ArrayCollection();
+        $this->trainings = new ArrayCollection();
     }
 
     // --- Getter & Setter ---
@@ -97,5 +105,11 @@ class Team
         }
 
         return $this;
+    }
+
+    /** @return Collection<int, Training> */
+    public function getTrainings(): Collection
+    {
+        return $this->trainings;
     }
 }

@@ -1,0 +1,189 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Trainingsplaner — Vereinsplaner{% endblock %}
+
+{% block body %}
+    <section class="py-12">
+        <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
+            Vereinsplaner
+        </p>
+        <h1 class="mt-3 font-heading text-4xl text-warm-900">Trainingsplaner</h1>
+        <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
+            Trainings verwalten, Anwesenheit erfassen und Trainingsquoten einsehen.
+        </p>
+
+        {# Flash Messages #}
+        {% for message in app.flashes('success') %}
+            <div class="mt-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a href="{{ path('app_training_new') }}" class="inline-block rounded-lg bg-warm-900 px-5 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">
+                + Neues Training
+            </a>
+            <a href="{{ path('app_club_planner') }}" class="inline-block rounded-lg border border-warm-300 px-5 py-2.5 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                &larr; Mitglieder
+            </a>
+        </div>
+    </section>
+
+    {# --- Trainings pro Team --- #}
+    {# Jedes Team bekommt eine eigene Section mit Tabelle/Cards. #}
+    {% for team in teams %}
+        {% set trainings = trainingsByTeam[team.id] %}
+
+        <section class="py-8 border-t border-warm-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-heading text-2xl text-warm-900">{{ team.name }}</h2>
+                    <p class="mt-1 text-sm text-warm-400">{{ team.sport }} · {{ trainings|length }} Training{{ trainings|length != 1 ? 's' : '' }}</p>
+                </div>
+                {# Link zur Trainingsquote — nur wenn es Trainings gibt #}
+                {% if trainings|length > 0 %}
+                    <a href="{{ path('app_training_quote', { id: team.id }) }}" class="text-sm text-accent-600 hover:text-accent-800 transition-colors">
+                        Trainingsquote →
+                    </a>
+                {% endif %}
+            </div>
+
+            {% if trainings|length > 0 %}
+                {# ========== MOBILE: Card-Layout (unter lg) ========== #}
+                <div class="mt-4 space-y-4 lg:hidden">
+                    {% for training in trainings %}
+                        <div class="rounded-xl border border-warm-200 p-5">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-medium text-warm-900">
+                                        {{ training.scheduledAt|date('d.m.Y') }}
+                                        <span class="text-warm-400 font-normal">{{ training.scheduledAt|date('H:i') }} Uhr</span>
+                                    </p>
+                                    {% if training.description %}
+                                        <p class="mt-1 text-sm text-warm-500">{{ training.description }}</p>
+                                    {% endif %}
+                                </div>
+                                {# Anwesenheits-Zähler als Badge #}
+                                {% set presentCount = training.attendances|filter(a => a.status == 'anwesend')|length %}
+                                <span class="rounded-full bg-accent-600/5 border border-accent-600/20 px-2.5 py-0.5 text-xs font-medium text-accent-700">
+                                    {{ presentCount }}/{{ training.attendances|length }}
+                                </span>
+                            </div>
+
+                            {% if training.location %}
+                                <p class="mt-2 text-sm text-warm-400">📍 {{ training.location }}</p>
+                            {% endif %}
+
+                            <div class="mt-4 flex items-center gap-4 border-t border-warm-100 pt-3">
+                                <a href="{{ path('app_training_attendance', { id: training.id }) }}" class="text-sm text-accent-600 hover:text-accent-800 transition-colors">
+                                    Anwesenheit
+                                </a>
+                                <a href="{{ path('app_training_edit', { id: training.id }) }}" class="text-sm text-warm-500 hover:text-accent-600 transition-colors">
+                                    Bearbeiten
+                                </a>
+                                {# Löschen mit Confirm-Dialog — gleicher Stimulus Controller wie bei Mitgliedern #}
+                                <div data-controller="confirm">
+                                    <button type="button" data-action="click->confirm#show" class="text-sm text-warm-400 hover:text-red-600 transition-colors">
+                                        Löschen
+                                    </button>
+                                    <dialog data-confirm-target="dialog" class="rounded-xl border border-warm-200 bg-white p-0 shadow-xl backdrop:bg-warm-900/40 backdrop:backdrop-blur-sm">
+                                        <div class="p-6">
+                                            <h3 class="font-heading text-lg text-warm-900">Training löschen?</h3>
+                                            <p class="mt-2 text-sm text-warm-500">
+                                                Training am <strong>{{ training.scheduledAt|date('d.m.Y') }}</strong> wird unwiderruflich gelöscht.
+                                            </p>
+                                            <div class="mt-6 flex items-center justify-end gap-3">
+                                                <button type="button" data-action="click->confirm#close" class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                                                    Abbrechen
+                                                </button>
+                                                <form method="post" action="{{ path('app_training_delete', { id: training.id }) }}">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete-training-' ~ training.id) }}">
+                                                    <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
+                                                        Löschen
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </dialog>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {# ========== DESKTOP: Tabelle (ab lg) ========== #}
+                {# Desktop: Datum + Uhrzeit in einer Spalte, reduziertes Padding (px-4 statt px-6)
+                   damit alle Spalten inkl. Aktionen reinpassen #}
+                <div class="mt-4 hidden lg:block">
+                    <div class="overflow-hidden rounded-xl border border-warm-200">
+                        <table class="w-full text-left text-sm">
+                            <thead class="border-b border-warm-200 bg-warm-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium text-warm-600">Datum</th>
+                                    <th class="px-4 py-3 font-medium text-warm-600">Beschreibung</th>
+                                    <th class="px-4 py-3 font-medium text-warm-600">Ort</th>
+                                    <th class="px-4 py-3 font-medium text-warm-600">Anwesend</th>
+                                    <th class="px-4 py-3 font-medium text-warm-600 text-right">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-warm-200">
+                                {% for training in trainings %}
+                                    {% set presentCount = training.attendances|filter(a => a.status == 'anwesend')|length %}
+                                    <tr class="transition-colors hover:bg-warm-50">
+                                        <td class="px-4 py-4 font-medium text-warm-900 whitespace-nowrap">
+                                            {{ training.scheduledAt|date('d.m.Y') }}
+                                            <span class="text-warm-400 font-normal">{{ training.scheduledAt|date('H:i') }}</span>
+                                        </td>
+                                        <td class="px-4 py-4 text-warm-500">{{ training.description ?? '—' }}</td>
+                                        <td class="px-4 py-4 text-warm-500">{{ training.location ?? '—' }}</td>
+                                        <td class="px-4 py-4">
+                                            <span class="rounded-full bg-accent-600/5 border border-accent-600/20 px-2.5 py-0.5 text-xs font-medium text-accent-700">
+                                                {{ presentCount }}/{{ training.attendances|length }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4 text-right">
+                                            <div class="flex items-center justify-end gap-3">
+                                                <a href="{{ path('app_training_attendance', { id: training.id }) }}" class="text-sm text-accent-600 hover:text-accent-800 transition-colors">
+                                                    Anwesenheit
+                                                </a>
+                                                <a href="{{ path('app_training_edit', { id: training.id }) }}" class="text-sm text-warm-500 hover:text-accent-600 transition-colors">
+                                                    Bearbeiten
+                                                </a>
+                                                <div data-controller="confirm">
+                                                    <button type="button" data-action="click->confirm#show" class="text-sm text-warm-400 hover:text-red-600 transition-colors">
+                                                        Löschen
+                                                    </button>
+                                                    <dialog data-confirm-target="dialog" class="rounded-xl border border-warm-200 bg-white p-0 shadow-xl backdrop:bg-warm-900/40 backdrop:backdrop-blur-sm">
+                                                        <div class="p-6">
+                                                            <h3 class="font-heading text-lg text-warm-900">Training löschen?</h3>
+                                                            <p class="mt-2 text-sm text-warm-500">
+                                                                Training am <strong>{{ training.scheduledAt|date('d.m.Y') }}</strong> wird unwiderruflich gelöscht.
+                                                            </p>
+                                                            <div class="mt-6 flex items-center justify-end gap-3">
+                                                                <button type="button" data-action="click->confirm#close" class="rounded-lg border border-warm-300 px-4 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100">
+                                                                    Abbrechen
+                                                                </button>
+                                                                <form method="post" action="{{ path('app_training_delete', { id: training.id }) }}">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete-training-' ~ training.id) }}">
+                                                                    <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700">
+                                                                        Löschen
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </dialog>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <p class="mt-4 text-sm text-warm-400 italic">Noch keine Trainings für dieses Team.</p>
+            {% endif %}
+        </section>
+    {% endfor %}
+{% endblock %}
