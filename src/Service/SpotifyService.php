@@ -20,10 +20,10 @@ class SpotifyService
     private const API_URL = 'https://api.spotify.com/v1';
     private const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
-    // 24 Stunden Cache — Discography-Daten ändern sich quasi nie.
-    // Deutlich länger als die setlist.fm-Daten (1h), weil Alben
-    // nicht wie Konzerte ständig neue hinzukommen.
-    private const CACHE_TTL = 86400;
+    // 30 Tage Cache — Metallica's Discography ändert sich quasi nie.
+    // Gleiches Vorgehen wie beim Konzert-Cache: lange TTL, weil die
+    // Daten sich extrem selten ändern (vielleicht 1x in 5 Jahren ein neues Album).
+    private const CACHE_TTL = 2592000;
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -47,7 +47,8 @@ class SpotifyService
 
     // --- Alle Studio-Alben, sortiert nach Release-Datum ---
     // include_groups=album filtert Singles, Compilations und Appears-On raus.
-    // Spotify paginiert maximal 50 Items pro Request.
+    // Spotify gibt bei Client Credentials nur 5 Alben pro Request zurück
+    // (kein eigenes limit erlaubt), daher paginieren wir mit offset.
     public function getAlbums(): array
     {
         return $this->cache->get('spotify_albums', function (ItemInterface $item) {
@@ -55,13 +56,12 @@ class SpotifyService
 
             $albums = [];
             $offset = 0;
-            $limit = 50;
 
-            // Spotify paginiert Alben — wir holen alle Seiten.
-            // Bei Metallica sind es ~15 Studio-Alben, also 1 Request.
+            // Spotify paginiert Alben — bei Client Credentials max. 5 pro Seite.
+            // Bei Metallica 21 Alben → 5 Requests. Alles gecacht, also egal.
             do {
                 $data = $this->apiRequest(
-                    '/artists/' . self::METALLICA_ID . '/albums?include_groups=album&limit=' . $limit . '&offset=' . $offset,
+                    '/artists/' . self::METALLICA_ID . '/albums?include_groups=album&offset=' . $offset,
                     null // Kein Einzel-Caching, wir cachen das Gesamtergebnis
                 );
 
@@ -77,9 +77,11 @@ class SpotifyService
                     ];
                 }
 
+                // Spotify gibt limit im Response zurück (aktuell 5)
+                $limit = $data['limit'];
                 $offset += $limit;
                 $total = $data['total'];
-            } while ($offset < $total);
+            } while ($data['next'] !== null);
 
             // Nach Release-Datum sortieren (älteste zuerst = chronologisch)
             usort($albums, fn($a, $b) => $a['release_date'] <=> $b['release_date']);
@@ -242,7 +244,12 @@ class SpotifyService
             return $this->doRequest($endpoint, $attempt + 1);
         }
 
-        // Andere Fehler oder letzte Retry-Chance → Exception werfen lassen
-        return $response->toArray();
+        // Andere Fehler oder letzte Retry-Chance → Exception werfen.
+        // Wird vom Controller gefangen → Seite zeigt gecachte Daten oder leere Section.
+        throw new \RuntimeException(sprintf(
+            'Spotify API Fehler: HTTP %d für %s',
+            $statusCode,
+            $url
+        ));
     }
 }

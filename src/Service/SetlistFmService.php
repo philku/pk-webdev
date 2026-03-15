@@ -17,10 +17,16 @@ class SetlistFmService
     private const METALLICA_MBID = '65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab';
     private const BASE_URL = 'https://api.setlist.fm/rest/1.0';
 
-    // Cache-Dauer: 1 Stunde (3600 Sekunden).
-    // Die setlist.fm-Daten ändern sich selten, also cachen wir die Antworten
-    // um unnötige API-Calls zu sparen (Rate Limit schonen).
+    // Cache-Dauer für Einzelabfragen: 1 Stunde (3600 Sekunden).
+    // Wird für einzelne Setlist-Detail-Seiten und Paginierung benutzt.
     private const CACHE_TTL = 3600;
+
+    // Cache-Dauer für den Full-Cache: 30 Tage (2.592.000 Sekunden).
+    // Der Full-Cache enthält ALLE ~2177 Konzerte zusammengebaut.
+    // 30 Tage statt 6 Stunden, weil wir bei jedem Besuch einen
+    // 1-API-Call-Check machen (total-Vergleich) und die TTL refreshen.
+    // So bleibt der Cache ewig warm, solange die Seite besucht wird.
+    private const FULL_CACHE_TTL = 2592000;
 
     public function __construct(
         // HttpClientInterface = Symfony's eingebauter HTTP-Client.
@@ -101,12 +107,14 @@ class SetlistFmService
 
     /**
      * Prüft ob der volle Konzert-Cache existiert (alle Seiten zusammen).
-     * Gibt das Array zurück wenn ja, null wenn nein.
+     * Gibt ['concerts' => [...], 'total' => int] zurück wenn ja, null wenn nein.
      *
      * Trick: CacheInterface::get() ruft den Callback NUR bei Cache-Miss auf.
      * Über die &$found Variable erkennen wir ob es ein Hit oder Miss war.
      * Bei Miss setzen wir $save = false, damit nichts Sinnloses gecacht wird.
      * (Der bool &$save Parameter ist seit Symfony 6.2 verfügbar.)
+     *
+     * @return array{concerts: array, total: int}|null
      */
     public function getFullMapCacheIfAvailable(): ?array
     {
@@ -114,7 +122,7 @@ class SetlistFmService
 
         $result = $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item, bool &$save) use (&$found) {
             $found = false;
-            $save = false; // Nichts cachen bei Miss — wir wollen nur prüfen
+            $save = false;
             return null;
         });
 
@@ -126,47 +134,214 @@ class SetlistFmService
      * Wird aufgerufen wenn die LETZTE Seite geladen wurde — dann existieren
      * alle Einzelseiten im Cache und wir können sie ohne API-Calls zusammensetzen.
      * Beim nächsten Besuch kommt dann alles auf einen Schlag aus diesem Cache.
+     *
+     * Cache-Struktur: ['concerts' => [...], 'total' => 2177]
+     * Das total wird gespeichert damit checkForNewConcerts() es mit dem
+     * aktuellen API-Wert vergleichen kann (Delta-Check).
      */
-    public function buildFullMapCache(int $totalPages): void
+    public function buildFullMapCache(int $totalPages, int $total): void
     {
-        // Alten Full-Cache löschen falls vorhanden
-        $this->cache->delete('setlistfm_metallica_all_map');
-
-        // Neuen Full-Cache aus den Seiten-Caches zusammenbauen.
+        // Alle Konzerte aus den Seiten-Caches zusammensammeln.
         // getMapConcertsPage() liest aus dem Cache (kein API-Call),
         // weil jede Seite bereits beim progressiven Laden gecacht wurde.
-        $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item) use ($totalPages) {
-            $item->expiresAfter(21600); // 6 Stunden, wie die Einzelseiten
+        $allConcerts = [];
+        for ($page = 1; $page <= $totalPages; $page++) {
+            $pageData = $this->getMapConcertsPage($page);
+            array_push($allConcerts, ...$pageData['concerts']);
+        }
 
-            $allConcerts = [];
-            for ($page = 1; $page <= $totalPages; $page++) {
-                $pageData = $this->getMapConcertsPage($page);
-                array_push($allConcerts, ...$pageData['concerts']);
-            }
-
-            return $allConcerts;
-        });
+        // Full-Cache mit 30 Tagen TTL speichern
+        $this->refreshFullCache($allConcerts, $total);
 
         // Song Play Counts aus den per-page Song-Caches zusammenbauen.
         // Jede Seite hat ihre eigenen Song-Counts (gecacht in cacheSongCountsForPage),
         // hier aggregieren wir sie zu einem Gesamt-Ranking.
-        $this->cache->delete('setlistfm_song_play_counts');
+        $allCounts = [];
+        for ($page = 1; $page <= $totalPages; $page++) {
+            $pageCounts = $this->getSongCountsForPage($page);
+            foreach ($pageCounts as $song => $count) {
+                $allCounts[$song] = ($allCounts[$song] ?? 0) + $count;
+            }
+        }
 
-        $this->cache->get('setlistfm_song_play_counts', function (ItemInterface $item) use ($totalPages) {
-            $item->expiresAfter(21600);
+        arsort($allCounts);
+        $this->saveSongPlayCounts($allCounts);
+    }
 
-            $allCounts = [];
-            for ($page = 1; $page <= $totalPages; $page++) {
-                // Per-page Song-Counts aus dem Cache lesen
-                $pageCounts = $this->getSongCountsForPage($page);
-                foreach ($pageCounts as $song => $count) {
-                    $allCounts[$song] = ($allCounts[$song] ?? 0) + $count;
+    /**
+     * Prüft ob neue Konzerte dazugekommen sind und aktualisiert den Cache.
+     * Braucht nur 1 API-Call (Seite 1) um das aktuelle total zu lesen.
+     *
+     * Ablauf:
+     *   1. Full-Cache lesen → gespeichertes total holen
+     *   2. 1 API-Call → aktuelles total von setlist.fm
+     *   3a. Gleich → TTL auf frische 30 Tage zurücksetzen, Cache zurückgeben
+     *   3b. Höher → Delta-Konzerte nachladen, vorne anhängen, neuen Cache speichern
+     *   3c. Kein Cache → null (Progressive Loading nötig)
+     *
+     * @return array|null Alle Konzerte oder null bei Cold Start
+     */
+    public function checkForNewConcerts(): ?array
+    {
+        // Full-Cache lesen — gibt ['concerts' => [...], 'total' => 2177] oder null
+        $cached = $this->getFullMapCacheIfAvailable();
+        if ($cached === null) {
+            return null; // Kein Cache vorhanden → Progressive Loading nötig
+        }
+
+        $cachedTotal = $cached['total'];
+        $cachedConcerts = $cached['concerts'];
+
+        // 1 API-Call: Seite 1 holen um aktuelles total zu prüfen.
+        // fetchPage() ist uncached — wir brauchen frische Daten für den Vergleich.
+        // Wenn die API down ist (Rate Limit, Timeout, 500er), geben wir einfach
+        // die gecachten Daten zurück — besser alte Daten als gar keine.
+        try {
+            $page1 = $this->fetchPage(1);
+        } catch (\Throwable) {
+            return $cachedConcerts;
+        }
+        $currentTotal = $page1['total'] ?? 0;
+
+        // --- Total gleich → Nichts Neues, nur TTL refreshen ---
+        // Cache-Daten bleiben gleich, aber die 30-Tage-Frist startet neu.
+        // So bleibt der Cache ewig warm, solange die Seite besucht wird.
+        if ($currentTotal === $cachedTotal) {
+            $this->refreshFullCache($cachedConcerts, $cachedTotal);
+            $this->refreshSongPlayCountsTtl();
+            return $cachedConcerts;
+        }
+
+        // --- Total höher → Neue Konzerte nachladen ---
+        if ($currentTotal > $cachedTotal) {
+            $delta = $currentTotal - $cachedTotal;
+
+            // Neue Konzerte aus den rohen API-Daten extrahieren.
+            // setlist.fm sortiert newest-first → neue Konzerte sind die ersten
+            // $delta Einträge ab Seite 1. Bei > 20 neuen werden weitere Seiten geholt.
+            $deltaSetlists = $this->fetchDeltaSetlists($page1, $delta);
+            $newConcerts = $this->transformSetlistsForMap($deltaSetlists);
+
+            // Neue Konzerte vorne anhängen (neueste zuerst)
+            $allConcerts = array_merge($newConcerts, $cachedConcerts);
+
+            // Full-Cache mit neuen Daten und frischer 30-Tage-TTL speichern
+            $this->refreshFullCache($allConcerts, $currentTotal);
+
+            // Song Play Counts mit den Songs aus den neuen Konzerten aktualisieren
+            $newSongCounts = $this->extractSongCounts($deltaSetlists);
+            $existingCounts = $this->getSongPlayCounts();
+
+            foreach ($newSongCounts as $song => $count) {
+                $existingCounts[$song] = ($existingCounts[$song] ?? 0) + $count;
+            }
+            arsort($existingCounts);
+            $this->saveSongPlayCounts($existingCounts);
+
+            return $allConcerts;
+        }
+
+        // Total ist gesunken (sollte bei Konzerten nicht passieren).
+        // Sicherheitshalber: Cache invalidieren → Progressive Loading beim nächsten Mal.
+        $this->cache->delete('setlistfm_metallica_all_map');
+        return null;
+    }
+
+    /**
+     * Holt die rohen Setlist-Daten für die neuen (Delta-)Konzerte.
+     * Seite 1 haben wir schon (vom total-Check), bei > 20 neuen
+     * werden weitere Seiten nachgeladen.
+     *
+     * @return array Rohe Setlist-Objekte (nur die $delta neuesten)
+     */
+    private function fetchDeltaSetlists(array $page1Data, int $delta): array
+    {
+        $allSetlists = $page1Data['setlist'] ?? [];
+        $itemsPerPage = $page1Data['itemsPerPage'] ?? 20;
+
+        // Wenn alle neuen Konzerte auf Seite 1 passen → fertig
+        if ($delta <= count($allSetlists)) {
+            return array_slice($allSetlists, 0, $delta);
+        }
+
+        // Mehr als eine Seite nötig → weitere Seiten nachladen.
+        // Beispiel: 45 neue Konzerte → Seite 1 (20) + Seite 2 (20) + Seite 3 (5)
+        $pagesNeeded = (int) ceil($delta / $itemsPerPage);
+        for ($page = 2; $page <= $pagesNeeded; $page++) {
+            $pageData = $this->fetchPage($page);
+            array_push($allSetlists, ...($pageData['setlist'] ?? []));
+        }
+
+        return array_slice($allSetlists, 0, $delta);
+    }
+
+    /**
+     * Extrahiert Song-Namen und Häufigkeiten aus rohen Setlist-Daten.
+     * Gleiche Logik wie cacheSongCountsForPage(), aber ohne Caching —
+     * wird für das Delta-Update der Song Play Counts benutzt.
+     *
+     * @return array<string, int> Song-Name (normalisiert) => Anzahl
+     */
+    private function extractSongCounts(array $setlists): array
+    {
+        $counts = [];
+        foreach ($setlists as $setlist) {
+            foreach ($setlist['sets']['set'] ?? [] as $set) {
+                foreach ($set['song'] ?? [] as $song) {
+                    $name = $song['name'] ?? '';
+                    if ($name === '') {
+                        continue;
+                    }
+                    $normalized = $this->normalizeSongName($name);
+                    $counts[$normalized] = ($counts[$normalized] ?? 0) + 1;
                 }
             }
+        }
+        return $counts;
+    }
 
-            arsort($allCounts);
+    // --- Cache-Helfer: Löschen + Neu-Speichern ---
+    // Symfony's CacheInterface hat keine "touch TTL"-Methode.
+    // Daher: Key löschen → sofort neu schreiben mit denselben Daten + frischer TTL.
+    // Nicht 100% atomar, aber für ein Portfolio-Projekt völlig ausreichend.
 
-            return $allCounts;
+    /**
+     * Speichert den Full-Cache (delete + re-create mit frischer 30-Tage-TTL).
+     * Wird sowohl beim TTL-Refresh als auch beim Delta-Update benutzt.
+     */
+    private function refreshFullCache(array $concerts, int $total): void
+    {
+        $this->cache->delete('setlistfm_metallica_all_map');
+        $this->cache->get('setlistfm_metallica_all_map', function (ItemInterface $item) use ($concerts, $total) {
+            $item->expiresAfter(self::FULL_CACHE_TTL);
+            return ['concerts' => $concerts, 'total' => $total];
+        });
+    }
+
+    /**
+     * Refresht nur die TTL des Song Play Counts Cache (Daten bleiben gleich).
+     * Wird aufgerufen wenn total gleich ist — die Song-Daten ändern sich nicht,
+     * aber die TTL soll wieder bei 30 Tagen starten.
+     */
+    private function refreshSongPlayCountsTtl(): void
+    {
+        $counts = $this->getSongPlayCounts();
+        if (empty($counts)) {
+            return;
+        }
+        $this->saveSongPlayCounts($counts);
+    }
+
+    /**
+     * Speichert Song Play Counts im Cache (delete + re-create).
+     * Wird von buildFullMapCache(), checkForNewConcerts() und refreshSongPlayCountsTtl() benutzt.
+     */
+    private function saveSongPlayCounts(array $counts): void
+    {
+        $this->cache->delete('setlistfm_song_play_counts');
+        $this->cache->get('setlistfm_song_play_counts', function (ItemInterface $item) use ($counts) {
+            $item->expiresAfter(self::FULL_CACHE_TTL);
+            return $counts;
         });
     }
 
