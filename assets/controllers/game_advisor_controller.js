@@ -41,6 +41,7 @@ export default class extends Controller {
 
         // Timer für Debounce der Suche
         this.searchTimer = null;
+
     }
 
     // --- Plattform wählen ---

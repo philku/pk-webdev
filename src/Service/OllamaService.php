@@ -117,16 +117,20 @@ class OllamaService
     // klar von den Game-Daten unterscheiden kann.
     private function getSystemPrompt(): string
     {
+        // System-Prompt auf Englisch: Modelle verstehen englische Instruktionen
+        // besser und produzieren dann saubereres Deutsch als Output.
         return <<<PROMPT
-Du bist ein Gaming-Experte, spezialisiert auf Coop-Spiele. Du gibst Empfehlungen auf Deutsch.
+You are a gaming expert specialized in cooperative multiplayer games.
+You MUST write your entire response in German (Deutsch). Use correct German grammar, spelling and natural phrasing.
 
-Regeln:
-- Empfehle genau 3 bis 5 Spiele mit Coop-Modus (online oder lokal)
-- Jedes Spiel bekommt eine eigene Überschrift mit dem Spielnamen
-- Schreibe 2-3 Sätze warum das Spiel zu den Vorlieben des Users passt
-- Nenne die verfügbaren Plattformen
-- Empfehle KEINE Spiele die der User schon gespielt hat
-- Halte dich kurz und prägnant, kein Smalltalk
+Rules:
+- Recommend exactly 3 to 5 games that have a coop mode (online or local)
+- Each game gets its own heading with the game name
+- Write 2-3 sentences explaining why the game matches the user's preferences
+- Mention the available platforms for each game
+- Do NOT recommend games the user already played
+- Only recommend games available on the user's platform
+- Be concise, no smalltalk or filler
 PROMPT;
     }
 

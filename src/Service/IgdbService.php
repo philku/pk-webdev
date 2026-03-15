@@ -22,9 +22,9 @@ class IgdbService
     // wir brauchen https:// davor. t_cover_big = 264x374px, gute Größe für Cards.
     private const IMAGE_URL = 'https://images.igdb.com/igdb/image/upload/t_cover_big/';
 
-    // Cache-Zeiten: Game-Details ändern sich selten (7 Tage),
-    // Suchergebnisse kurzlebiger (1 Stunde).
-    private const CACHE_TTL = 604800;       // 7 Tage
+    // Cache-Zeiten: Die Vorauswahl-Games sind fest im Code — deren Details
+    // ändern sich praktisch nie (30 Tage). Suchergebnisse kurzlebiger (1 Stunde).
+    private const CACHE_TTL = 2592000;      // 30 Tage
     private const SEARCH_CACHE_TTL = 3600;  // 1 Stunde
 
     // Felder die wir bei jeder Abfrage brauchen.
@@ -39,20 +39,22 @@ class IgdbService
         'Shooter' => [
             260780, // Call of Duty: Modern Warfare III
             250616, // Helldivers 2
-            19164,  // Borderlands 3
+            185258, // ARC Raiders
         ],
         'Sport' => [
             308698, // EA Sports FC 25
             308034, // NBA 2K25
+            11198,  // Rocket League
         ],
         'RPG' => [
-            119133, // Elden Ring
+            325591, // Elden Ring Nightreign
             125165, // Diablo IV
             119171, // Baldur's Gate III
         ],
         'Horror' => [
             132516, // Phasmophobia
             18866,  // Dead by Daylight
+            212089, // Lethal Company
         ],
         'Adventure' => [
             135243, // It Takes Two
@@ -137,18 +139,34 @@ class IgdbService
         return $this->cache->get('igdb_popular_games', function (ItemInterface $item) {
             $item->expiresAfter(self::CACHE_TTL);
 
-            $result = [];
+            // Alle IDs aus allen Genres sammeln und in EINEM API-Call laden.
+            // Vorher: 16 einzelne Requests (je ~300ms) = ~5 Sekunden.
+            // Jetzt: 1 Request mit where id = (1,2,3,...) = ~300ms.
+            $allIds = array_merge(...array_values(self::POPULAR_GAMES));
+            $idList = implode(',', $allIds);
 
+            $data = $this->apiRequest('/games', sprintf(
+                'fields %s; where id = (%s); limit %d;',
+                self::GAME_FIELDS,
+                $idList,
+                count($allIds)
+            ));
+
+            // API-Ergebnis als id → Game-Array indexieren für schnellen Zugriff
+            $gamesById = [];
+            foreach ($data as $game) {
+                $gamesById[$game['id']] = $this->transformGame($game);
+            }
+
+            // In Genre-Gruppen aufteilen, Reihenfolge aus POPULAR_GAMES beibehalten
+            $result = [];
             foreach (self::POPULAR_GAMES as $genre => $ids) {
                 $games = [];
-
                 foreach ($ids as $id) {
-                    $game = $this->getGame($id);
-                    if ($game !== null) {
-                        $games[] = $game;
+                    if (isset($gamesById[$id])) {
+                        $games[] = $gamesById[$id];
                     }
                 }
-
                 $result[$genre] = $games;
             }
 
