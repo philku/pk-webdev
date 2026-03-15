@@ -50,6 +50,24 @@
                     Demo ansehen &rarr;
                 </a>
             </article>
+            {# KI Game Berater Card #}
+            <article class="group rounded-xl border border-warm-200 p-7 transition-all hover:border-accent-500 hover:shadow-lg hover:shadow-accent-500/5">
+                <div class="flex items-start justify-between">
+                    <h2 class="font-heading text-2xl text-warm-900">KI Game Berater</h2>
+                </div>
+                <p class="mt-3 text-sm leading-relaxed text-warm-500">
+                    KI-gestützter Coop-Game-Empfehler. Wähle deine Lieblingsspiele und erhalte personalisierte Vorschläge.
+                </p>
+                <ul class="mt-5 flex flex-wrap gap-2">
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">Ollama / LLM</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">SSE Streaming</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">IGDB API</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">OAuth 2.0</li>
+                </ul>
+                <a href="{{ path('app_game_advisor') }}" class="mt-6 inline-block text-sm font-medium text-accent-600 hover:text-accent-700 transition-colors">
+                    Demo ansehen &rarr;
+                </a>
+            </article>
         </div>
     </section>
 {% endblock %}

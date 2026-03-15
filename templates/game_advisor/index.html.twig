@@ -1,0 +1,141 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}KI Game Berater{% endblock %}
+
+{% block body %}
+    {# Stimulus Controller: steuert den gesamten Flow.
+       Die URL-Values übergeben die API-Endpoints an den Controller,
+       damit er sie für fetch()-Calls nutzen kann. #}
+    <div data-controller="game-advisor"
+         data-game-advisor-search-url-value="{{ path('app_game_advisor_search') }}"
+         data-game-advisor-recommend-url-value="{{ path('app_game_advisor_recommend') }}">
+
+        {# ===== INTRO ===== #}
+        <section class="py-12">
+            <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
+                Tech Demo
+            </p>
+            <h1 class="mt-3 font-heading text-4xl text-warm-900">KI Game Berater</h1>
+            <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
+                Wähle deine Plattform, markiere Games die dir gefallen haben, und lass die KI
+                euer nächstes Coop-Abenteuer finden.
+            </p>
+        </section>
+
+        {# ===== SECTION 1: Plattform-Wahl ===== #}
+        <section class="py-8 border-t border-warm-200">
+            <h2 class="font-heading text-2xl text-warm-900">1. Plattform wählen</h2>
+            <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {% for platform in ['PS5', 'Xbox', 'PC', 'Switch 2'] %}
+                    <button type="button"
+                        class="cursor-pointer rounded-xl border-2 border-warm-200 px-4 py-4 text-center text-sm font-medium text-warm-500 transition-all hover:border-warm-300"
+                        data-game-advisor-target="platform"
+                        data-action="click->game-advisor#selectPlatform"
+                        data-game-advisor-platform-param="{{ platform }}">
+                        {{ platform }}
+                    </button>
+                {% endfor %}
+            </div>
+        </section>
+
+        {# ===== SECTION 2: Game-Auswahl (hidden bis Plattform gewählt) ===== #}
+        <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="gameSection">
+            <h2 class="font-heading text-2xl text-warm-900">2. Welche Games mochtest du?</h2>
+            <p class="mt-2 text-sm text-warm-400">Klicke auf Games oder suche nach weiteren.</p>
+
+            {# --- Suchfeld mit Autocomplete --- #}
+            <div class="relative mt-6 max-w-md">
+                <input type="search"
+                    placeholder="Game suchen..."
+                    class="w-full rounded-lg border border-warm-300 bg-white py-2.5 pl-10 pr-4 text-sm text-warm-900 placeholder-warm-400 transition-colors focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                    data-game-advisor-target="searchInput"
+                    data-action="input->game-advisor#search">
+                {# Lupe-Icon #}
+                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-warm-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+
+                {# Dropdown für Suchergebnisse — absolut positioniert unter dem Input #}
+                <div class="hidden absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-xl border border-warm-200 bg-white shadow-lg"
+                     data-game-advisor-target="searchResults">
+                </div>
+            </div>
+
+            {# --- Quick-Pick: Populäre Games nach Genre --- #}
+            {% for genre, games in popularGames %}
+                <div class="mt-8">
+                    <h3 class="text-sm font-medium uppercase tracking-widest text-warm-400">{{ genre }}</h3>
+                    <div class="mt-3 flex gap-3 overflow-x-auto pb-2">
+                        {% for game in games %}
+                            <button type="button"
+                                class="cursor-pointer flex-shrink-0 w-32 rounded-xl border-2 border-warm-200 p-2 text-center transition-all hover:border-warm-300"
+                                data-action="click->game-advisor#toggleGame"
+                                data-game-advisor-id-param="{{ game.id }}"
+                                data-game-advisor-name-param="{{ game.name }}"
+                                data-game-advisor-cover-param="{{ game.cover ?? '' }}">
+                                {# Cover mit Overlay-Container: relative für absolute Positionierung des Häkchens #}
+                                <div class="relative mx-auto h-40 w-28">
+                                    {% if game.cover %}
+                                        <img src="{{ game.cover }}" alt="{{ game.name }}"
+                                             class="h-40 w-28 rounded-lg object-cover" loading="lazy">
+                                    {% else %}
+                                        <div class="h-40 w-28 rounded-lg bg-warm-200"></div>
+                                    {% endif %}
+                                    {# Overlay: grauer Schleier + Häkchen, initial hidden.
+                                       Der Stimulus Controller toggled 'hidden' per Klasse 'selected-overlay'. #}
+                                    <div class="absolute inset-0 hidden items-center justify-center rounded-lg bg-warm-900/40" data-overlay>
+                                        <svg class="h-12 w-12 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs font-medium text-warm-700 leading-tight">{{ game.name }}</p>
+                                {% if game.critic_rating %}
+                                    <p class="mt-1 text-xs text-warm-400">{{ game.critic_rating }}%</p>
+                                {% endif %}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </section>
+
+        {# ===== SECTION 3: Ausgewählte Games (Pills) ===== #}
+        {# Überschrift wird per JS eingeblendet sobald mindestens 1 Game gewählt ist #}
+        <h3 class="hidden pt-6 text-sm font-medium uppercase tracking-widest text-warm-400"
+            data-game-advisor-target="selectedHeading">Ausgewählte Spiele</h3>
+        <div class="flex flex-wrap gap-2 py-4" data-game-advisor-target="selectedList">
+        </div>
+
+        {# ===== SECTION 4: Submit-Button ===== #}
+        <section class="py-8 border-t border-warm-200">
+            <button type="button"
+                class="cursor-pointer rounded-lg bg-warm-900 px-6 py-3 text-sm font-medium text-warm-50 transition-all hover:bg-accent-700 disabled:cursor-not-allowed opacity-50"
+                disabled
+                data-game-advisor-target="submitButton"
+                data-action="click->game-advisor#submit">
+                Was sollen wir als nächstes zocken?
+            </button>
+        </section>
+
+        {# ===== SECTION 5: KI-Ergebnis (hidden bis Submit) ===== #}
+        <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="resultSection">
+            <h2 class="font-heading text-2xl text-warm-900">Empfehlung</h2>
+
+            {# Lade-Animation: drehendes Icon #}
+            <div class="mt-4 flex items-center gap-3 text-warm-400" data-game-advisor-target="loading">
+                <svg class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm">KI denkt nach...</span>
+            </div>
+
+            {# Hier streamt der Text rein — whitespace-pre-wrap damit Zeilenumbrüche
+               aus dem LLM korrekt dargestellt werden #}
+            <div class="mt-4 max-w-2xl text-warm-700 leading-relaxed whitespace-pre-wrap"
+                 data-game-advisor-target="resultText">
+            </div>
+        </section>
+    </div>
+{% endblock %}
