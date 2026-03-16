@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Service\IgdbService;
-use App\Service\OllamaService;
+use App\Service\GeminiService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,8 +21,8 @@ class GameAdvisorController extends AbstractController
     #[Route('', name: 'app_game_advisor')]
     public function index(IgdbService $igdb): Response
     {
-        // Vorauswahl-Games laden — beim ersten Aufruf ~13 API-Calls,
-        // danach 7 Tage aus dem Cache.
+        // Vorauswahl-Games laden — beim ersten Aufruf 1 API-Call,
+        // danach 30 Tage aus dem Cache.
         try {
             $popularGames = $igdb->getPopularGames();
         } catch (\Exception) {
@@ -58,17 +58,18 @@ class GameAdvisorController extends AbstractController
     // ---------- KI-Empfehlung (SSE Stream) ----------
     // Liest die ausgewählten Game-IDs + Plattform aus dem Request,
     // holt die Game-Details aus IGDB (gecacht), und streamt die
-    // Ollama-Antwort als Server-Sent Events zum Browser.
+    // Gemini-Antwort als Server-Sent Events zum Browser.
     //
     // SSE-Format: Jede Nachricht ist eine Zeile "data: {...}\n\n"
-    // Der Browser liest das mit der EventSource API oder fetch + ReadableStream.
+    // Der Browser liest das mit fetch + ReadableStream.
     #[Route('/api/recommend', name: 'app_game_advisor_recommend', methods: ['POST'])]
-    public function recommend(Request $request, IgdbService $igdb, OllamaService $ollama): Response
+    public function recommend(Request $request, IgdbService $igdb, GeminiService $gemini): Response
     {
         // JSON-Body lesen (Stimulus schickt Content-Type: application/json)
         $data = json_decode($request->getContent(), true);
         $gameIds = $data['gameIds'] ?? [];
         $platform = $data['platform'] ?? 'PC';
+        $playerCount = $data['playerCount'] ?? 2;
 
         if (empty($gameIds)) {
             return $this->json(['error' => 'Keine Spiele ausgewählt'], 400);
@@ -84,7 +85,7 @@ class GameAdvisorController extends AbstractController
         // StreamedResponse: Symfony schickt die Response nicht auf einmal,
         // sondern ruft die Callback-Funktion auf, die stückweise Daten schreibt.
         // Solange der Callback läuft, bleibt die HTTP-Verbindung offen.
-        return new StreamedResponse(function () use ($games, $platform, $ollama) {
+        return new StreamedResponse(function () use ($games, $platform, $playerCount, $gemini) {
             // X-Accel-Buffering: no — KRITISCH für DDEV/nginx.
             // Ohne diesen Header puffert nginx die gesamte Response
             // und der Client sieht nichts bis Ollama komplett fertig ist.
@@ -94,7 +95,7 @@ class GameAdvisorController extends AbstractController
             try {
                 // streamRecommendations() ist ein Generator:
                 // Jeder yield gibt einen Text-Chunk (ein paar Wörter) zurück.
-                foreach ($ollama->streamRecommendations($games, $platform) as $chunk) {
+                foreach ($gemini->streamRecommendations($games, $platform, $playerCount) as $chunk) {
                     // SSE-Format: "data: {json}\n\n"
                     // Doppeltes \n ist der SSE-Standard — trennt Events voneinander.
                     echo 'data: ' . json_encode(['text' => $chunk]) . "\n\n";
@@ -117,7 +118,7 @@ class GameAdvisorController extends AbstractController
             } catch (\Exception $e) {
                 // Fehler als SSE-Event senden statt die Verbindung einfach abzubrechen.
                 // So kann der Client eine Fehlermeldung anzeigen.
-                echo 'data: ' . json_encode(['error' => 'Ollama ist nicht erreichbar. Stelle sicher dass Ollama läuft.']) . "\n\n";
+                echo 'data: ' . json_encode(['error' => 'Gemini API ist nicht erreichbar. Bitte versuche es später erneut.']) . "\n\n";
                 if (ob_get_level() > 0) {
                     ob_flush();
                 }

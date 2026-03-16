@@ -42,8 +42,8 @@ class IgdbService
             185258, // ARC Raiders
         ],
         'Sport' => [
-            308698, // EA Sports FC 25
-            308034, // NBA 2K25
+            353848, // EA Sports FC 26
+            353901, // NBA 2K26
             11198,  // Rocket League
         ],
         'RPG' => [
