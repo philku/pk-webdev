@@ -1,4 +1,35 @@
 @import "tailwindcss";
+@source "../../assets";
+@source "../../templates/components/_unter_der_haube.html.twig";
+
+/* ==============================
+   SELF-HOSTED FONTS
+   Keine Google Fonts CDN — DSGVO-konform.
+   woff2-Dateien liegen in /public/fonts/
+   ============================== */
+@font-face {
+    font-family: "Sora";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("/fonts/sora-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "DM Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "DM Sans";
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/dm-sans-italic-latin.woff") format("woff");
+}
 
 /* ==============================
    CUSTOM THEME
@@ -9,7 +40,7 @@
    ============================== */
 @theme {
     /* Typografie: Serif für Headlines, Sans für Body */
-    --font-heading: "DM Serif Display", serif;
+    --font-heading: "Sora", sans-serif;
     --font-body: "DM Sans", sans-serif;
 
     /* Warme Neutraltöne statt kaltem Grau — gibt der Seite Charakter */
