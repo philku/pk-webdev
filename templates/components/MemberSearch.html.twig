@@ -177,8 +177,10 @@
                                         bg-amber-50 text-amber-700 border border-amber-200
                                     {% elseif member.role == 'Betreuer' %}
                                         bg-purple-50 text-purple-700 border border-purple-200
+                                    {% elseif member.role == 'Mitglied' %}
+                                        bg-blue-50 text-blue-700 border border-blue-200
                                     {% else %}
-                                        bg-accent-600/5 text-accent-700 border border-accent-600/20
+                                    bg-accent-600/5 text-accent-700 border border-accent-600/20
                                     {% endif %}
                                 ">
                                     {{ member.role }}
