@@ -25,7 +25,7 @@ import { Controller } from '@hotwired/stimulus';
  */
 export default class extends Controller {
     static targets = [
-        'platform', 'gameSection', 'searchInput', 'searchResults',
+        'platform', 'playerSection', 'playerCount', 'gameSection', 'searchInput', 'searchResults',
         'selectedHeading', 'selectedList', 'submitButton', 'resultSection', 'resultText', 'loading',
     ];
 
@@ -35,8 +35,9 @@ export default class extends Controller {
     };
 
     connect() {
-        // Zustand: welche Plattform gewählt, welche Games ausgewählt
+        // Zustand: welche Plattform gewählt, Spieleranzahl, welche Games ausgewählt
         this.selectedPlatform = null;
+        this.selectedPlayerCount = null;
         this.selectedGames = []; // Array von {id, name, cover} Objekten
 
         // Timer für Debounce der Suche
@@ -62,7 +63,30 @@ export default class extends Controller {
             }
         });
 
-        // Game-Auswahl-Section einblenden
+        // Spieleranzahl-Section einblenden (nächster Schritt)
+        this.playerSectionTarget.classList.remove('hidden');
+
+        this.updateSubmitButton();
+    }
+
+    // --- Spieleranzahl wählen ---
+    // Wird aufgerufen wenn ein Spieleranzahl-Button geklickt wird.
+    selectPlayerCount(event) {
+        const button = event.currentTarget;
+        this.selectedPlayerCount = parseInt(button.dataset.gameAdvisorCountParam);
+
+        // Alle Buttons: aktiven highlighten, Rest zurücksetzen
+        this.playerCountTargets.forEach(btn => {
+            if (btn === button) {
+                btn.classList.add('border-accent-500', 'bg-accent-50', 'text-accent-700');
+                btn.classList.remove('border-warm-200', 'text-warm-500');
+            } else {
+                btn.classList.remove('border-accent-500', 'bg-accent-50', 'text-accent-700');
+                btn.classList.add('border-warm-200', 'text-warm-500');
+            }
+        });
+
+        // Game-Auswahl-Section einblenden (nächster Schritt)
         this.gameSectionTarget.classList.remove('hidden');
 
         this.updateSubmitButton();
@@ -82,19 +106,20 @@ export default class extends Controller {
         const overlay = card.querySelector('[data-overlay]');
 
         if (index >= 0) {
-            // Game entfernen
+            // Game entfernen — Border + Hover zurücksetzen
             this.selectedGames.splice(index, 1);
-            card.classList.remove('border-accent-500');
-            card.classList.add('border-warm-200');
+            card.classList.remove('border-accent-500', 'hover:border-accent-600');
+            card.classList.add('border-warm-200', 'hover:border-warm-400');
             if (overlay) {
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
             }
         } else {
-            // Game hinzufügen
+            // Game hinzufügen — Border + Hover auf Accent umstellen,
+            // damit hover:border-warm-400 nicht die Accent-Border überschreibt
             this.selectedGames.push({ id, name, cover });
-            card.classList.remove('border-warm-200');
-            card.classList.add('border-accent-500');
+            card.classList.remove('border-warm-200', 'hover:border-warm-400');
+            card.classList.add('border-accent-500', 'hover:border-accent-600');
             if (overlay) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
@@ -181,11 +206,13 @@ export default class extends Controller {
     // Schickt die ausgewählten Games + Plattform an den Server.
     // Liest die SSE-Response Chunk für Chunk und zeigt den Text live an.
     async submit() {
-        if (!this.selectedPlatform || this.selectedGames.length === 0) return;
+        if (!this.selectedPlatform || !this.selectedPlayerCount || this.selectedGames.length === 0) return;
 
         // UI vorbereiten: Ergebnis-Section zeigen, Text leeren, Laden starten
         this.resultSectionTarget.classList.remove('hidden');
-        this.resultTextTarget.textContent = '';
+        this.resultTextTarget.innerHTML = '';
+        this.streamedText = '';
+        this.renderedLineCount = 0;
         this.loadingTarget.classList.remove('hidden');
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.classList.add('opacity-50');
@@ -203,6 +230,7 @@ export default class extends Controller {
                 body: JSON.stringify({
                     gameIds: this.selectedGames.map(g => g.id),
                     platform: this.selectedPlatform,
+                    playerCount: this.selectedPlayerCount,
                 }),
             });
 
@@ -233,13 +261,14 @@ export default class extends Controller {
                         const data = JSON.parse(line.substring(6));
 
                         if (data.error) {
-                            this.resultTextTarget.textContent = data.error;
+                            this.resultTextTarget.innerHTML = `<p class="text-red-600">${this.escapeHtml(data.error)}</p>`;
                             this.resetSubmitButton();
                             return;
                         }
 
                         if (data.text) {
-                            this.resultTextTarget.textContent += data.text;
+                            this.streamedText += data.text;
+                            this.renderStreamedText();
                         }
 
                         if (data.done) {
@@ -253,11 +282,70 @@ export default class extends Controller {
             }
         } catch {
             this.loadingTarget.classList.add('hidden');
-            this.resultTextTarget.textContent =
-                'Verbindung fehlgeschlagen. Stelle sicher dass Ollama läuft.';
+            this.resultTextTarget.innerHTML =
+                '<p class="text-red-600">Verbindung fehlgeschlagen. Bitte versuche es später erneut.</p>';
         }
 
         this.resetSubmitButton();
+    }
+
+    // --- Streaming-Text inkrementell als HTML rendern ---
+    // Baut DOM-Elemente Stück für Stück auf statt innerHTML komplett zu ersetzen.
+    // So werden bereits angezeigte Überschriften nicht neu erstellt.
+    //
+    // Logik: Text in Zeilen splitten. Alle Zeilen außer der letzten sind
+    // "abgeschlossen" (hatten ein \n). Nur neue abgeschlossene Zeilen
+    // werden als permanente DOM-Elemente angehängt. Die letzte (unvollständige)
+    // Zeile wird in ein temporäres Element geschrieben, das laufend aktualisiert wird.
+    renderStreamedText() {
+        const lines = this.streamedText.split('\n');
+        const incompleteLine = lines.pop();
+
+        // Temporäres Streaming-Element entfernen (wird unten neu erstellt)
+        const streaming = this.resultTextTarget.querySelector('[data-streaming]');
+        if (streaming) streaming.remove();
+
+        // Neue abgeschlossene Zeilen als permanente Elemente anhängen
+        while (this.renderedLineCount < lines.length) {
+            const trimmed = lines[this.renderedLineCount].trim();
+            this.renderedLineCount++;
+
+            if (trimmed === '') continue;
+
+            if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
+                // Markdown-Überschrift → Spieltitel mit Accent-Linie links
+                const title = this.escapeHtml(trimmed.replace(/^#{2,3}\s*/, ''));
+                const div = document.createElement('div');
+                div.className = 'mt-6 mb-2 border-l-4 border-accent-500 pl-4';
+                div.innerHTML = `<h3 class="font-heading text-lg text-warm-900">${title}</h3>`;
+                this.resultTextTarget.appendChild(div);
+            } else {
+                const p = document.createElement('p');
+                p.className = 'mt-1 text-warm-600 leading-relaxed';
+                p.innerHTML = this.formatInlineMarkdown(trimmed);
+                this.resultTextTarget.appendChild(p);
+            }
+        }
+
+        // Unvollständige Zeile als temporäres Element anzeigen
+        const trimmedIncomplete = incompleteLine.trim();
+        if (trimmedIncomplete) {
+            const el = document.createElement('p');
+            el.setAttribute('data-streaming', '');
+            el.className = 'mt-1 text-warm-600 leading-relaxed';
+            el.innerHTML = this.formatInlineMarkdown(trimmedIncomplete);
+            this.resultTextTarget.appendChild(el);
+        }
+    }
+
+    // --- Inline-Markdown formatieren ---
+    // Erkennt *text* (Markdown-Italic) und ersetzt es durch dezent
+    // hervorgehobene Spans. Text wird vorher escaped (XSS-Schutz).
+    formatInlineMarkdown(text) {
+        const escaped = this.escapeHtml(text);
+        // *text* oder **text** → dezente Hervorhebung
+        return escaped.replace(/\*{1,2}([^*]+)\*{1,2}/g,
+            '<span class="font-medium text-warm-800">$1</span>');
     }
 
     // --- Hilfsfunktionen ---
@@ -318,7 +406,7 @@ export default class extends Controller {
 
     // Submit-Button: aktiv wenn Plattform + mindestens 1 Game gewählt
     updateSubmitButton() {
-        const enabled = this.selectedPlatform && this.selectedGames.length > 0;
+        const enabled = this.selectedPlatform && this.selectedPlayerCount && this.selectedGames.length > 0;
         this.submitButtonTarget.disabled = !enabled;
         this.submitButtonTarget.classList.toggle('opacity-50', !enabled);
     }
