@@ -123,7 +123,7 @@ class MetallicaController extends AbstractController
         $playCounts = $setlistFm->getSongPlayCounts();
 
         $topPlayed = [];
-        foreach (array_slice($playCounts, 0, 20, true) as $song => $count) {
+        foreach (array_slice($playCounts, 0, 10, true) as $song => $count) {
             $topPlayed[] = [
                 'name' => $song,
                 'count' => $count,
