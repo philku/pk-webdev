@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}KI Game Berater{% endblock %}
+{% block title %}Find my next Co-op{% endblock %}
 
 {% block body %}
     {# Stimulus Controller: steuert den gesamten Flow.
@@ -15,18 +15,56 @@
             <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
                 Tech Demo
             </p>
-            <h1 class="mt-3 font-heading text-4xl text-warm-900">KI Game Berater</h1>
+            <h1 class="mt-3 font-heading text-4xl text-warm-900">Find my next Co-op</h1>
             <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
                 Wähle deine Plattform, markiere Games die dir gefallen haben, und lass die KI
                 euer nächstes Coop-Abenteuer finden.
             </p>
+
+            {# ===== Unter der Haube ===== #}
+            {% embed 'components/_unter_der_haube.html.twig' %}
+                {% block items %}
+                    <div class="border-l-2 border-accent-500/30 pl-4">
+                        <h3 class="text-sm font-semibold text-warm-900">Gemini API</h3>
+                        <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                            Die Empfehlungen kommen von Google Gemini 3.1 Flash Lite. Der System-Prompt ist auf Englisch
+                            formuliert (LLMs verstehen englische Instruktionen besser) und erzwingt eine deutsche Antwort
+                            mit korrekter Grammatik.
+                        </p>
+                    </div>
+                    <div class="border-l-2 border-accent-500/30 pl-4">
+                        <h3 class="text-sm font-semibold text-warm-900">SSE Streaming</h3>
+                        <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                            Die KI-Antwort wird Token für Token gestreamt. Serverseitig nutzt ein PHP Generator (yield)
+                            die Symfony StreamedResponse, clientseitig liest ein ReadableStream die Server-Sent Events
+                            und baut DOM-Elemente inkrementell auf.
+                        </p>
+                    </div>
+                    <div class="border-l-2 border-accent-500/30 pl-4">
+                        <h3 class="text-sm font-semibold text-warm-900">IGDB API + OAuth 2.0</h3>
+                        <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                            Game-Daten (Cover, Genres, Plattformen) kommen von der IGDB API (Twitch). Authentifizierung
+                            per OAuth 2.0 Client Credentials Flow. Die Vorauswahl-Games werden in einem einzigen
+                            Batch-Request geladen und 30 Tage gecacht.
+                        </p>
+                    </div>
+                    <div class="border-l-2 border-accent-500/30 pl-4">
+                        <h3 class="text-sm font-semibold text-warm-900">Stimulus Controller</h3>
+                        <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                            Der gesamte Flow (Plattform, Spieleranzahl, Game-Auswahl, Suche, Submit) wird von einem
+                            einzigen Stimulus Controller gesteuert. Debounced Autocomplete, XSS-Schutz für externe
+                            API-Daten und inkrementelles DOM-Rendering beim Streaming.
+                        </p>
+                    </div>
+                {% endblock %}
+            {% endembed %}
         </section>
 
         {# ===== SECTION 1: Plattform-Wahl ===== #}
         <section class="py-8 border-t border-warm-200">
             <h2 class="font-heading text-2xl text-warm-900">1. Plattform wählen</h2>
             <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {% for platform in ['PS5', 'Xbox', 'PC', 'Switch 2'] %}
+                {% for platform in ['PS5', 'Xbox Series S/X', 'PC', 'Switch 2'] %}
                     <button type="button"
                         class="cursor-pointer rounded-xl border-2 border-warm-200 px-4 py-4 text-center text-sm font-medium text-warm-500 transition-all hover:border-warm-300"
                         data-game-advisor-target="platform"
@@ -38,10 +76,26 @@
             </div>
         </section>
 
-        {# ===== SECTION 2: Game-Auswahl (hidden bis Plattform gewählt) ===== #}
+        {# ===== SECTION 2: Spieleranzahl (hidden bis Plattform gewählt) ===== #}
+        <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="playerSection">
+            <h2 class="font-heading text-2xl text-warm-900">2. Wie viele Spieler?</h2>
+            <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {% for count in [2, 3, 4] %}
+                    <button type="button"
+                        class="cursor-pointer rounded-xl border-2 border-warm-200 px-6 py-4 text-center text-sm font-medium text-warm-500 transition-all hover:border-warm-300"
+                        data-game-advisor-target="playerCount"
+                        data-action="click->game-advisor#selectPlayerCount"
+                        data-game-advisor-count-param="{{ count }}">
+                        {{ count }} Spieler
+                    </button>
+                {% endfor %}
+            </div>
+        </section>
+
+        {# ===== SECTION 3: Game-Auswahl (hidden bis Spieleranzahl gewählt) ===== #}
         <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="gameSection">
-            <h2 class="font-heading text-2xl text-warm-900">2. Welche Games mochtest du?</h2>
-            <p class="mt-2 text-sm text-warm-400">Klicke auf Games oder suche nach weiteren.</p>
+            <h2 class="font-heading text-2xl text-warm-900">3. Welche Games magst du?</h2>
+            <p class="mt-2 text-sm text-warm-400">Suche nach deinen Lieblingsspielen oder wähle aus den Vorschlägen.</p>
 
             {# --- Suchfeld mit Autocomplete --- #}
             <div class="relative mt-6 max-w-md">
@@ -68,7 +122,7 @@
                     <div class="mt-3 flex gap-3 overflow-x-auto pb-2">
                         {% for game in games %}
                             <button type="button"
-                                class="cursor-pointer flex-shrink-0 w-32 rounded-xl border-2 border-warm-200 p-2 text-center transition-all hover:border-warm-300"
+                                class="cursor-pointer flex-shrink-0 w-32 rounded-xl border-2 border-warm-200 p-2 text-center transition-all hover:border-warm-400"
                                 data-action="click->game-advisor#toggleGame"
                                 data-game-advisor-id-param="{{ game.id }}"
                                 data-game-advisor-name-param="{{ game.name }}"
@@ -97,14 +151,14 @@
             {% endfor %}
         </section>
 
-        {# ===== SECTION 3: Ausgewählte Games (Pills) ===== #}
+        {# ===== SECTION 4: Ausgewählte Games (Pills) ===== #}
         {# Überschrift wird per JS eingeblendet sobald mindestens 1 Game gewählt ist #}
         <h3 class="hidden pt-6 text-sm font-medium uppercase tracking-widest text-warm-400"
             data-game-advisor-target="selectedHeading">Ausgewählte Spiele</h3>
         <div class="flex flex-wrap gap-2 py-4" data-game-advisor-target="selectedList">
         </div>
 
-        {# ===== SECTION 4: Submit-Button ===== #}
+        {# ===== SECTION 5: Submit-Button ===== #}
         <section class="py-8 border-t border-warm-200">
             <button type="button"
                 class="cursor-pointer rounded-lg bg-warm-900 px-6 py-3 text-sm font-medium text-warm-50 transition-all hover:bg-accent-700 disabled:cursor-not-allowed opacity-50"
@@ -115,7 +169,7 @@
             </button>
         </section>
 
-        {# ===== SECTION 5: KI-Ergebnis (hidden bis Submit) ===== #}
+        {# ===== SECTION 6: KI-Ergebnis (hidden bis Submit) ===== #}
         <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="resultSection">
             <h2 class="font-heading text-2xl text-warm-900">Empfehlung</h2>
 
@@ -128,11 +182,12 @@
                 <span class="text-sm">KI denkt nach...</span>
             </div>
 
-            {# Hier streamt der Text rein — whitespace-pre-wrap damit Zeilenumbrüche
-               aus dem LLM korrekt dargestellt werden #}
-            <div class="mt-4 max-w-2xl text-warm-700 leading-relaxed whitespace-pre-wrap"
+            {# Hier streamt der Text rein — DOM-Elemente werden inkrementell
+               aufgebaut (Überschriften + Absätze), kein whitespace-pre-wrap nötig. #}
+            <div class="mt-4 max-w-2xl text-warm-700 leading-relaxed"
                  data-game-advisor-target="resultText">
             </div>
         </section>
+
     </div>
 {% endblock %}

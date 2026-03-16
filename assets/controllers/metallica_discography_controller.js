@@ -4,7 +4,6 @@ import { Controller } from '@hotwired/stimulus';
 // Fetcht Daten vom Stats-Endpoint und rendert custom HTML-Bars.
 export default class extends Controller {
     static targets = [
-        'playedChart',
         'playedContainer',
     ];
 
@@ -29,16 +28,12 @@ export default class extends Controller {
         const { topPlayed } = this.statsData;
 
         if (!topPlayed?.length) {
-            this.playedChartTarget.style.display = 'none';
             this.playedContainerTarget.innerHTML =
                 '<p class="text-sm text-warm-400 py-8 text-center">' +
                 'Noch keine Live-Daten verfügbar. Die Konzertkarte muss mindestens einmal vollständig geladen werden.' +
                 '</p>';
             return;
         }
-
-        // Canvas verstecken — wir rendern HTML stattdessen
-        this.playedChartTarget.style.display = 'none';
 
         const maxCount = topPlayed[0].count;
 

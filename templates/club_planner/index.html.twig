@@ -11,14 +11,53 @@
         <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
             Mitgliederverwaltung mit CRUD, Live-Suche, Echtzeit-Validierung und Trainingsplaner.
         </p>
+
+        {# ===== Unter der Haube ===== #}
+        {% embed 'components/_unter_der_haube.html.twig' %}
+            {% block items %}
+                <div class="border-l-2 border-accent-500/30 pl-4">
+                    <h3 class="text-sm font-semibold text-warm-900">Doctrine ORM</h3>
+                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                        Vier Entities mit ManyToOne, OneToMany und einer Pivot-Entity (TrainingAttendance) für die
+                        n:m-Beziehung zwischen Training und Mitglied mit Zusatzfeld (Status). Aggregation-Queries mit
+                        COUNT, SUM CASE WHEN und GROUP BY für die Anwesenheitsquote.
+                    </p>
+                </div>
+                <div class="border-l-2 border-accent-500/30 pl-4">
+                    <h3 class="text-sm font-semibold text-warm-900">Live Components</h3>
+                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                        Mitglieder-Suche und Formular-Validierung laufen als Live Components — bei jeder Eingabe wird
+                        serverseitig validiert und das Ergebnis sofort im Browser aktualisiert, ohne Page-Reload.
+                    </p>
+                </div>
+                <div class="border-l-2 border-accent-500/30 pl-4">
+                    <h3 class="text-sm font-semibold text-warm-900">Symfony Forms</h3>
+                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                        Das Trainingsformular nutzt bewusst den klassischen handleRequest-Flow — kein Live Component,
+                        damit beide Patterns im Portfolio sichtbar sind. Validierung über Assert-Constraints auf den Entities.
+                    </p>
+                </div>
+                <div class="border-l-2 border-accent-500/30 pl-4">
+                    <h3 class="text-sm font-semibold text-warm-900">Stimulus</h3>
+                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                        JavaScript-Interaktionen (Sortierung, Pagination, Modals) werden über Stimulus Controller gesteuert —
+                        leichtgewichtig und ohne Build-Step, direkt an HTML-Attribute gebunden.
+                    </p>
+                </div>
+            {% endblock %}
+        {% endembed %}
+
+    </section>
+
+    <section class="py-8 border-t border-warm-200">
         {# Flash Messages #}
         {% for message in app.flashes('success') %}
-            <div class="mt-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <div class="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                 {{ message }}
             </div>
         {% endfor %}
 
-        <div class="mt-8 flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3">
             <a href="{{ path('app_club_planner_new') }}" class="inline-block rounded-lg bg-warm-900 px-5 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">
                 + Neues Mitglied
             </a>
@@ -26,12 +65,13 @@
                 Trainingsplaner →
             </a>
         </div>
+
+        {# Die gesamte Mitgliederliste (Suchfeld + Tabelle/Cards) #}
+        {# wird jetzt von der Live Component gerendert. #}
+        {# Bei jeder Eingabe im Suchfeld wird nur dieser Bereich neu geladen. #}
+        <div class="mt-8">
+            {{ component('MemberSearch') }}
+        </div>
     </section>
 
-    {# Die gesamte Mitgliederliste (Suchfeld + Tabelle/Cards) #}
-    {# wird jetzt von der Live Component gerendert. #}
-    {# Bei jeder Eingabe im Suchfeld wird nur dieser Bereich neu geladen. #}
-    <section class="py-8">
-        {{ component('MemberSearch') }}
-    </section>
 {% endblock %}
