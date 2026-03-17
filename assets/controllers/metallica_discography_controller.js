@@ -59,13 +59,12 @@ export default class extends Controller {
                 <div class="group relative rounded-lg overflow-hidden transition-colors hover:bg-accent-600/[0.04]">
                     <div class="absolute inset-y-0 left-0 rounded-lg transition-all duration-500"
                          style="width: ${percent}%;
-                                background: rgba(13, 148, 136, ${barOpacity});
-                                border-right: 2px solid rgba(13, 148, 136, ${borderOpacity});">
+                                background: rgba(13, 148, 136, ${barOpacity});">
                     </div>
                     <div class="relative flex items-center gap-3 px-3 py-2.5 sm:py-2">
                         ${rankBadge}
                         <span class="flex-1 min-w-0 text-sm sm:text-[13px] font-medium text-warm-800 truncate">${displayName}</span>
-                        <span class="shrink-0 text-sm sm:text-[13px] font-semibold tabular-nums text-accent-700">${song.count.toLocaleString('de-DE')}x</span>
+                        <span class="shrink-0 text-sm sm:text-[13px] font-semibold tabular-nums text-accent-700">${song.count.toLocaleString('de-DE')}</span>
                     </div>
                 </div>
             `;
