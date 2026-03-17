@@ -31,17 +31,18 @@
                     </p>
                 </div>
                 <div class="border-l-2 border-accent-500/30 pl-4">
-                    <h3 class="text-sm font-semibold text-warm-900">Symfony Forms</h3>
-                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
-                        Das Trainingsformular nutzt bewusst den klassischen handleRequest-Flow — kein Live Component,
-                        damit beide Patterns im Portfolio sichtbar sind. Validierung über Assert-Constraints auf den Entities.
-                    </p>
-                </div>
-                <div class="border-l-2 border-accent-500/30 pl-4">
                     <h3 class="text-sm font-semibold text-warm-900">Stimulus</h3>
                     <p class="mt-1 text-sm text-warm-500 leading-relaxed">
                         JavaScript-Interaktionen (Sortierung, Pagination, Modals) werden über Stimulus Controller gesteuert —
                         leichtgewichtig und ohne Build-Step, direkt an HTML-Attribute gebunden.
+                    </p>
+                </div>
+                <div class="border-l-2 border-accent-500/30 pl-4">
+                    <h3 class="text-sm font-semibold text-warm-900">Symfony Forms</h3>
+                    <p class="mt-1 text-sm text-warm-500 leading-relaxed">
+                        Das Trainingsformular im <a href="{{ path('app_trainings') }}" class="text-accent-600 hover:text-accent-800 transition-colors">Trainingsplaner</a>
+                        nutzt den klassischen Symfony handleRequest-Flow als Gegenstück zu den Live Components.
+                        Validierung läuft über Assert-Constraints direkt auf den Entities.
                     </p>
                 </div>
             {% endblock %}

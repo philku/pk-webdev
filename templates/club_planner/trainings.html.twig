@@ -9,7 +9,8 @@
         </p>
         <h1 class="mt-3 font-heading text-4xl text-warm-900">Trainingsplaner</h1>
         <p class="mt-4 max-w-lg text-warm-500 leading-relaxed">
-            Trainings verwalten, Anwesenheit erfassen und Trainingsquoten einsehen.
+            Trainings erstellen, Anwesenheit erfassen und Quoten auswerten.
+            Symfony Forms mit Assert-Validierung und Doctrine Aggregation-Queries.
         </p>
 
         {# Flash Messages #}
@@ -19,7 +20,10 @@
             </div>
         {% endfor %}
 
-        <div class="mt-8 flex flex-wrap gap-3">
+    </section>
+
+    <section class="py-8 border-t border-warm-200">
+        <div class="flex flex-wrap gap-3">
             <a href="{{ path('app_training_new') }}" class="inline-block rounded-lg bg-warm-900 px-5 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">
                 + Neues Training
             </a>
@@ -27,22 +31,20 @@
                 &larr; Mitglieder
             </a>
         </div>
-    </section>
 
     {# --- Trainings pro Team --- #}
-    {# Jedes Team bekommt eine eigene Section mit Tabelle/Cards. #}
     {% for team in teams %}
         {% set trainings = trainingsByTeam[team.id] %}
 
-        <section class="py-8 border-t border-warm-200">
-            <div class="flex items-center justify-between">
+        <div class="mt-8 {{ not loop.first ? 'pt-8 border-t border-warm-200' }}">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="font-heading text-2xl text-warm-900">{{ team.name }}</h2>
                     <p class="mt-1 text-sm text-warm-400">{{ team.sport }} · {{ trainings|length }} Training{{ trainings|length != 1 ? 's' : '' }}</p>
                 </div>
                 {# Link zur Trainingsquote — nur wenn es Trainings gibt #}
                 {% if trainings|length > 0 %}
-                    <a href="{{ path('app_training_quote', { id: team.id }) }}" class="text-sm text-accent-600 hover:text-accent-800 transition-colors">
+                    <a href="{{ path('app_training_quote', { id: team.id }) }}" class="inline-flex items-center gap-1.5 self-start rounded-lg border border-warm-200 px-3.5 py-2 text-sm font-medium text-warm-600 transition-colors hover:border-accent-600 hover:text-accent-600">
                         Trainingsquote →
                     </a>
                 {% endif %}
@@ -184,6 +186,7 @@
             {% else %}
                 <p class="mt-4 text-sm text-warm-400 italic">Noch keine Trainings für dieses Team.</p>
             {% endif %}
-        </section>
+        </div>
     {% endfor %}
+    </section>
 {% endblock %}
