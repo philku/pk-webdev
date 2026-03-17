@@ -21,3 +21,8 @@
 # NHL React App
 /public/nhl-build/
 /nhl-standings/node_modules/
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
