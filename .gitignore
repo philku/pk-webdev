@@ -17,3 +17,7 @@
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+
+# NHL React App
+/public/nhl-build/
+/nhl-standings/node_modules/

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @source "../../assets";
 @source "../../templates/components/_unter_der_haube.html.twig";
+@source "../../nhl-standings/src";
 
 /* ==============================
    SELF-HOSTED FONTS

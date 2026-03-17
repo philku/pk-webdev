@@ -55,6 +55,19 @@
                     <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">OAuth 2.0</li>
                 </ul>
             </a>
+            {# NHL Standings Card #}
+            <a href="{{ path('app_nhl_standings') }}" data-turbo="false" class="group block rounded-xl border border-warm-200 p-7 transition-all hover:border-accent-500 hover:shadow-lg hover:shadow-accent-500/5">
+                <h2 class="font-heading text-2xl text-warm-900">NHL Standings</h2>
+                <p class="mt-3 text-sm leading-relaxed text-warm-500">
+                    Aktuelle NHL-Tabelle mit Team-Rosters. Gebaut als React-SPA, eingebettet in Symfony.
+                </p>
+                <ul class="mt-5 flex flex-wrap gap-2">
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">React</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">TypeScript</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">Vite</li>
+                    <li class="rounded-full border border-accent-600/20 bg-accent-600/5 px-3 py-1 text-xs font-medium text-accent-700">NHL API</li>
+                </ul>
+            </a>
         </div>
     </section>
 {% endblock %}
