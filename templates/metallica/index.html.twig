@@ -26,32 +26,32 @@
                 <div class="border-l-2 border-accent-500/30 pl-4">
                     <h3 class="text-sm font-semibold text-warm-900">Spotify API + OAuth 2.0</h3>
                     <p class="mt-1 text-sm text-warm-500 leading-relaxed">
-                        Discography und Top-Tracks werden über die Spotify Web API geladen. Authentifizierung per
+                        Die Discography wird über die Spotify Web API geladen. Authentifizierung per
                         OAuth 2.0 Client Credentials Flow — Token wird automatisch gecacht und bei Ablauf erneuert.
                     </p>
                 </div>
                 <div class="border-l-2 border-accent-500/30 pl-4">
                     <h3 class="text-sm font-semibold text-warm-900">setlist.fm API</h3>
                     <p class="mt-1 text-sm text-warm-500 leading-relaxed">
-                        Über 2.000 Konzerte werden seitenweise von der setlist.fm API geladen. Retry-Logik mit
-                        Exponential Backoff fängt Rate Limits ab. Die Song-Statistik wird per Aggregation aus
-                        allen Setlists berechnet.
+                        Über 2.000 Konzerte werden beim ersten Steienaufruf seitenweise von der setlist.fm API geladen
+                        und gecacht. Retry-Logik mit Exponential Backoff fängt Rate Limits ab. Die Live-Song-Statistik
+                        wird aus allen Setlists ausgewertet und als Top-10-Ranking aufbereitet.
                     </p>
                 </div>
                 <div class="border-l-2 border-accent-500/30 pl-4">
                     <h3 class="text-sm font-semibold text-warm-900">Redis Caching + Delta-Check</h3>
                     <p class="mt-1 text-sm text-warm-500 leading-relaxed">
-                        Alle API-Daten werden 30 Tage in Redis gecacht. Ein Delta-Check prüft mit nur einem API-Call
-                        ob neue Konzerte dazugekommen sind — statt alle Seiten neu zu laden, werden nur die neuen
-                        Einträge geholt und vorne angefügt.
+                        Alle API-Daten werden 30 Tage in Redis gecacht. Ein Delta-Check prüft bei jedem Seitenaufruf
+                        mit nur einem API-Call ob neue Konzerte dazugekommen sind — statt alle Seiten neu zu laden,
+                        werden nur die neuen Einträge nachgeladen und in den bestehenden Cache eingefügt.
                     </p>
                 </div>
                 <div class="border-l-2 border-accent-500/30 pl-4">
                     <h3 class="text-sm font-semibold text-warm-900">Leaflet Maps + Stimulus</h3>
                     <p class="mt-1 text-sm text-warm-500 leading-relaxed">
                         Die interaktive Weltkarte nutzt Leaflet.js, gesteuert über einen Stimulus Controller.
-                        Auf Mobilgeräten öffnet sich ein swipebares Bottom Sheet statt Popups — mit Touch-Events
-                        und proportionaler Backdrop-Opacity.
+                        Auf Mobilgeräten öffnet sich beim Klick auf einen Veranstaltungsort ein swipebares Bottom Sheet
+                        statt Popups — mit Touch-Events und proportionaler Backdrop-Opacity.
                     </p>
                 </div>
             {% endblock %}
@@ -170,7 +170,7 @@
              data-metallica-discography-url-value="{{ path('app_metallica_discography_stats') }}">
         <h2 class="font-heading text-2xl text-warm-900">Meistgespielte Songs live</h2>
         <p class="mt-2 text-xs text-warm-400">
-            Top 20 — basierend auf setlist.fm Konzertdaten
+            Top 10 — basierend auf setlist.fm Konzertdaten
         </p>
         <div data-metallica-discography-target="playedContainer" class="mt-4"></div>
     </section>
@@ -179,7 +179,7 @@
     <section class="pb-16">
         <h2 class="font-heading text-2xl text-warm-900">Discography</h2>
 
-        <p class="mt-2 text-sm text-warm-500">
+        <p class="mt-2 text-xs text-warm-400">
             {{ albums|length }} Alben — Daten aus der Spotify API.
         </p>
 
