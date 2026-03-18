@@ -9,6 +9,11 @@ on:
   pull_request:
     branches: [main]
 
+# Node.js 24 für GitHub Actions — ab Juni 2026 Pflicht,
+# wir stellen jetzt schon um damit keine Deprecation-Warnings kommen.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ==================== PHP TESTS ====================
   # Fährt MariaDB + Redis als Service-Container hoch,
@@ -24,7 +29,7 @@ jobs:
         image: mariadb:11.8
         env:
           MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: pkwebdev_test
+          MARIADB_DATABASE: pkwebdev
           MARIADB_USER: test
           MARIADB_PASSWORD: test
         ports:
@@ -78,7 +83,7 @@ jobs:
         run: php bin/console doctrine:migrations:migrate --no-interaction
         env:
           APP_ENV: test
-          DATABASE_URL: mysql://test:test@127.0.0.1:3306/pkwebdev_test?serverVersion=11.8.0-mariadb&charset=utf8mb4
+          DATABASE_URL: mysql://test:test@127.0.0.1:3306/pkwebdev?serverVersion=11.8.0-mariadb&charset=utf8mb4
 
       # PHPUnit starten — alle Tests im tests/ Ordner
       - name: PHPUnit ausführen
@@ -87,7 +92,7 @@ jobs:
           APP_ENV: test
           APP_SECRET: '$ecretf0rt3st'
           KERNEL_CLASS: App\Kernel
-          DATABASE_URL: mysql://test:test@127.0.0.1:3306/pkwebdev_test?serverVersion=11.8.0-mariadb&charset=utf8mb4
+          DATABASE_URL: mysql://test:test@127.0.0.1:3306/pkwebdev?serverVersion=11.8.0-mariadb&charset=utf8mb4
           REDIS_URL: redis://127.0.0.1:6379
           SETLISTFM_API_KEY: test-key
           SPOTIFY_CLIENT_ID: test-id
