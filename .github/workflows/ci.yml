@@ -17,7 +17,7 @@ env:
 jobs:
   # ==================== PHP TESTS ====================
   # Fährt MariaDB + Redis als Service-Container hoch,
-  # installiert PHP 8.4 + Composer, führt Migrations aus, startet PHPUnit.
+  # installiert PHP 8.4 + Composer, baut Tailwind, führt Migrations aus, startet PHPUnit.
   tests:
     name: PHPUnit Tests
     runs-on: ubuntu-latest
@@ -51,11 +51,29 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+    # Env-Vars auf Job-Level — gelten für alle Steps,
+    # statt sie pro Step zu wiederholen.
+    env:
+      APP_ENV: test
+      APP_SECRET: '$ecretf0rt3st'
+      KERNEL_CLASS: App\Kernel
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/pkwebdev?serverVersion=11.8.0-mariadb&charset=utf8mb4
+      REDIS_URL: redis://127.0.0.1:6379
+      SETLISTFM_API_KEY: test-key
+      SPOTIFY_CLIENT_ID: test-id
+      SPOTIFY_CLIENT_SECRET: test-secret
+      IGDB_CLIENT_ID: test-id
+      IGDB_CLIENT_SECRET: test-secret
+      GEMINI_API_KEY: test-key
+      GEMINI_MODEL: gemini-3.1-flash-lite-preview
+
     steps:
       # Code aus dem Repo auschecken
       - uses: actions/checkout@v4
 
-      # PHP 8.4 installieren mit den Extensions die Symfony braucht
+      # PHP 8.4 installieren mit den Extensions die Symfony braucht.
+      # setup-php cached Composer-Downloads automatisch wenn man es aktiviert —
+      # besser als vendor/ manuell zu cachen.
       - name: PHP 8.4 einrichten
         uses: shivammathur/setup-php@v2
         with:
@@ -63,79 +81,34 @@ jobs:
           extensions: ctype, iconv, intl, mbstring, xml, curl, redis
           tools: composer:v2
 
-      # Composer-Cache nutzen damit nicht jedes Mal alles neu runtergeladen wird.
-      # Der Key basiert auf composer.lock — ändert sich nur wenn Dependencies sich ändern.
+      # Composer-Cache: cached ~/.composer/cache (Download-Cache),
+      # nicht vendor/ — so werden Package-Downloads wiederverwendet
+      # auch wenn sich composer.lock ändert.
       - name: Composer Cache
         uses: actions/cache@v4
         with:
-          path: vendor
+          path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      # Dependencies installieren (inkl. dev-Dependencies für PHPUnit)
+      # Dependencies installieren (inkl. dev-Dependencies für PHPUnit).
+      # --no-progress reduziert Log-Noise in der CI.
       - name: Composer install
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       # Tailwind CSS bauen — die Tests rendern Twig-Templates,
       # und base.html.twig bindet das Tailwind-Asset ein.
-      # Ohne Build gibt es "Unable to find asset tailwindcss".
+      # --minify prüft gleichzeitig ob der minifizierte Build funktioniert.
       - name: Tailwind build
-        run: php bin/console tailwind:build
+        run: php bin/console tailwind:build --minify
 
       # Datenbank-Migrations ausführen damit die Tabellen existieren
       - name: Datenbank migrieren
         run: php bin/console doctrine:migrations:migrate --no-interaction
-        env:
-          APP_ENV: test
-          DATABASE_URL: mysql://root:root@127.0.0.1:3306/pkwebdev?serverVersion=11.8.0-mariadb&charset=utf8mb4
 
       # PHPUnit starten — alle Tests im tests/ Ordner
       - name: PHPUnit ausführen
         run: vendor/bin/phpunit
-        env:
-          APP_ENV: test
-          APP_SECRET: '$ecretf0rt3st'
-          KERNEL_CLASS: App\Kernel
-          DATABASE_URL: mysql://root:root@127.0.0.1:3306/pkwebdev?serverVersion=11.8.0-mariadb&charset=utf8mb4
-          REDIS_URL: redis://127.0.0.1:6379
-          SETLISTFM_API_KEY: test-key
-          SPOTIFY_CLIENT_ID: test-id
-          SPOTIFY_CLIENT_SECRET: test-secret
-          IGDB_CLIENT_ID: test-id
-          IGDB_CLIENT_SECRET: test-secret
-          GEMINI_API_KEY: test-key
-          GEMINI_MODEL: gemini-3.1-flash-lite-preview
-
-  # ==================== TAILWIND BUILD ====================
-  # Prüft ob der Tailwind CSS Build funktioniert.
-  # Das SymfonyCasts Tailwind Bundle managed die Tailwind Binary selbst.
-  tailwind:
-    name: Tailwind CSS Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: PHP 8.4 einrichten
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          tools: composer:v2
-
-      - name: Composer Cache
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      - name: Composer install
-        run: composer install --no-interaction --prefer-dist
-
-      # Tailwind CSS kompilieren — das Bundle lädt die Binary automatisch
-      # und scannt alle Twig-Templates nach verwendeten Klassen.
-      - name: Tailwind build
-        run: php bin/console tailwind:build --minify
 
   # ==================== NHL REACT BUILD ====================
   # Prüft ob der TypeScript-Check und Vite-Build für die React-App funktionieren.
