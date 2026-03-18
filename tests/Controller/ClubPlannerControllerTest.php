@@ -283,6 +283,32 @@ class ClubPlannerControllerTest extends WebTestCase
         $this->assertNull($deleted, 'Training sollte nach dem Löschen nicht mehr in der DB sein');
     }
 
+    // Prüft: Training bearbeiten mit ungültiger ID gibt 404.
+    public function testEditNonExistentTrainingReturns404(): void
+    {
+        $this->client->request('GET', '/vereinsplaner/trainings/99999/bearbeiten');
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    // Prüft: Training löschen mit ungültigem CSRF löscht nicht.
+    public function testDeleteTrainingWithInvalidCsrfDoesNotDelete(): void
+    {
+        $team = $this->createTeam();
+        $training = $this->createTraining($team);
+        $trainingId = $training->getId();
+
+        $this->client->request('POST', '/vereinsplaner/trainings/' . $trainingId . '/loeschen', [
+            '_token' => 'ungueltig',
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner/trainings');
+
+        $this->em->clear();
+        $stillExists = $this->em->getRepository(Training::class)->find($trainingId);
+        $this->assertNotNull($stillExists, 'Training darf bei ungültigem CSRF nicht gelöscht werden');
+    }
+
     // ==================== ANWESENHEIT ====================
 
     // Prüft: Anwesenheitsseite lädt für ein Training mit Mitgliedern.
@@ -336,6 +362,14 @@ class ClubPlannerControllerTest extends WebTestCase
         $this->assertSame('anwesend', $updated->getStatus());
     }
 
+    // Prüft: Anwesenheitsseite mit ungültiger Training-ID gibt 404.
+    public function testAttendanceNonExistentTrainingReturns404(): void
+    {
+        $this->client->request('GET', '/vereinsplaner/trainings/99999/anwesenheit');
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
     // ==================== TRAININGSQUOTE ====================
 
     // Prüft: Trainingsquote-Seite lädt mit gültigem Team.
@@ -346,5 +380,13 @@ class ClubPlannerControllerTest extends WebTestCase
         $this->client->request('GET', '/vereinsplaner/trainings/quote/' . $team->getId());
 
         $this->assertResponseIsSuccessful();
+    }
+
+    // Prüft: Trainingsquote mit ungültiger Team-ID gibt 404.
+    public function testTrainingQuoteNonExistentTeamReturns404(): void
+    {
+        $this->client->request('GET', '/vereinsplaner/trainings/quote/99999');
+
+        $this->assertResponseStatusCodeSame(404);
     }
 }
