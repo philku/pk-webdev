@@ -4,6 +4,8 @@ namespace App\Tests\Controller;
 
 use App\Entity\Member;
 use App\Entity\Team;
+use App\Entity\Training;
+use App\Entity\TrainingAttendance;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -155,6 +157,19 @@ class ClubPlannerControllerTest extends WebTestCase
 
     // ==================== TRAININGS ====================
 
+    // Hilfsmethode: Erstellt ein Training in der Test-DB.
+    private function createTraining(Team $team, string $date = '2026-03-20 18:00'): Training
+    {
+        $training = new Training();
+        $training->setScheduledAt(new \DateTime($date));
+        $training->setLocation('Sportplatz Süd');
+        $training->setTeam($team);
+        $this->em->persist($training);
+        $this->em->flush();
+
+        return $training;
+    }
+
     // Prüft: Trainingsliste lädt korrekt.
     public function testTrainingsPageLoads(): void
     {
@@ -169,6 +184,156 @@ class ClubPlannerControllerTest extends WebTestCase
         $this->client->request('GET', '/vereinsplaner/trainings/neu');
 
         $this->assertResponseIsSuccessful();
+    }
+
+    // Prüft: Training erstellen über Formular-Submit.
+    // submitForm() liest das CSRF-Token automatisch aus dem gerenderten Formular —
+    // wir müssen es nicht manuell extrahieren.
+    public function testCreateTrainingViaForm(): void
+    {
+        $team = $this->createTeam();
+        $member = $this->createMember($team);
+
+        // Formularseite laden
+        $this->client->request('GET', '/vereinsplaner/trainings/neu');
+
+        // Formular ausfüllen und absenden.
+        // 'training[...]' entspricht dem Symfony Form-Name (TrainingType → 'training').
+        $this->client->submitForm('Speichern', [
+            'training[scheduledAt]' => '2026-04-01T18:00',
+            'training[location]' => 'Sportplatz Nord',
+            'training[description]' => 'Taktiktraining',
+            'training[team]' => $team->getId(),
+        ]);
+
+        // Erwartung: Redirect zur Trainingsliste nach erfolgreichem Speichern.
+        $this->assertResponseRedirects('/vereinsplaner/trainings');
+
+        // Prüfen: Training ist in der DB.
+        $training = $this->em->getRepository(Training::class)->findOneBy([
+            'location' => 'Sportplatz Nord',
+        ]);
+        $this->assertNotNull($training, 'Training sollte in der DB gespeichert sein');
+
+        // Prüfen: Anwesenheitseinträge wurden automatisch für jedes Team-Mitglied erstellt.
+        // Der Controller erstellt pro Member einen TrainingAttendance-Eintrag (Default: 'abwesend').
+        $attendances = $this->em->getRepository(TrainingAttendance::class)->findBy([
+            'training' => $training,
+        ]);
+        $this->assertCount(1, $attendances, 'Für jedes Mitglied sollte ein Anwesenheitseintrag existieren');
+        $this->assertSame('abwesend', $attendances[0]->getStatus());
+    }
+
+    // Prüft: Training bearbeiten — Formular lädt mit bestehenden Daten.
+    public function testEditTrainingFormLoads(): void
+    {
+        $team = $this->createTeam();
+        $training = $this->createTraining($team);
+
+        $this->client->request('GET', '/vereinsplaner/trainings/' . $training->getId() . '/bearbeiten');
+
+        $this->assertResponseIsSuccessful();
+    }
+
+    // Prüft: Training bearbeiten — Änderungen werden gespeichert.
+    public function testEditTrainingViaForm(): void
+    {
+        $team = $this->createTeam();
+        $training = $this->createTraining($team);
+        $trainingId = $training->getId();
+
+        $this->client->request('GET', '/vereinsplaner/trainings/' . $trainingId . '/bearbeiten');
+
+        // Formular absenden mit neuen Daten.
+        // Team-Feld ist im Edit-Modus nicht enthalten (include_team: false).
+        $this->client->submitForm('Speichern', [
+            'training[scheduledAt]' => '2026-04-15T19:00',
+            'training[location]' => 'Halle 3',
+            'training[description]' => 'Ausdauertraining',
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner/trainings');
+
+        // Prüfen: Daten sind aktualisiert.
+        $this->em->clear();
+        $updated = $this->em->getRepository(Training::class)->find($trainingId);
+        $this->assertSame('Halle 3', $updated->getLocation());
+    }
+
+    // Prüft: Training löschen mit gültigem CSRF-Token.
+    public function testDeleteTrainingWithValidCsrf(): void
+    {
+        $team = $this->createTeam();
+        $training = $this->createTraining($team);
+        $trainingId = $training->getId();
+
+        // Trainingsliste laden um CSRF-Token zu extrahieren.
+        $crawler = $this->client->request('GET', '/vereinsplaner/trainings');
+        $deleteForm = $crawler->filter('form[action$="/' . $trainingId . '/loeschen"]');
+        $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', '/vereinsplaner/trainings/' . $trainingId . '/loeschen', [
+            '_token' => $csrfToken,
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner/trainings');
+
+        $this->em->clear();
+        $deleted = $this->em->getRepository(Training::class)->find($trainingId);
+        $this->assertNull($deleted, 'Training sollte nach dem Löschen nicht mehr in der DB sein');
+    }
+
+    // ==================== ANWESENHEIT ====================
+
+    // Prüft: Anwesenheitsseite lädt für ein Training mit Mitgliedern.
+    public function testAttendancePageLoads(): void
+    {
+        $team = $this->createTeam();
+        $member = $this->createMember($team);
+        $training = $this->createTraining($team);
+
+        // Anwesenheitseintrag erstellen (wie der Controller es beim Training-Erstellen tut)
+        $attendance = new TrainingAttendance();
+        $attendance->setTraining($training);
+        $attendance->setMember($member);
+        $this->em->persist($attendance);
+        $this->em->flush();
+
+        $this->client->request('GET', '/vereinsplaner/trainings/' . $training->getId() . '/anwesenheit');
+
+        $this->assertResponseIsSuccessful();
+    }
+
+    // Prüft: Anwesenheit speichern — Status wird korrekt aktualisiert.
+    public function testUpdateAttendanceStatus(): void
+    {
+        $team = $this->createTeam();
+        $member = $this->createMember($team);
+        $training = $this->createTraining($team);
+
+        $attendance = new TrainingAttendance();
+        $attendance->setTraining($training);
+        $attendance->setMember($member);
+        $this->em->persist($attendance);
+        $this->em->flush();
+
+        // Status von 'abwesend' (Default) auf 'anwesend' ändern.
+        // Das Formular schickt status[memberId] = 'anwesend'.
+        $this->client->request('POST', '/vereinsplaner/trainings/' . $training->getId() . '/anwesenheit', [
+            'status' => [
+                $member->getId() => 'anwesend',
+            ],
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner/trainings/' . $training->getId() . '/anwesenheit');
+
+        // Prüfen: Status wurde aktualisiert.
+        $this->em->clear();
+        $updated = $this->em->getRepository(TrainingAttendance::class)->findOneBy([
+            'training' => $training->getId(),
+            'member' => $member->getId(),
+        ]);
+        $this->assertSame('anwesend', $updated->getStatus());
     }
 
     // ==================== TRAININGSQUOTE ====================
