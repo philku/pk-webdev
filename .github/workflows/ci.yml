@@ -76,6 +76,12 @@ jobs:
       - name: Composer install
         run: composer install --no-interaction --prefer-dist
 
+      # Tailwind CSS bauen — die Tests rendern Twig-Templates,
+      # und base.html.twig bindet das Tailwind-Asset ein.
+      # Ohne Build gibt es "Unable to find asset tailwindcss".
+      - name: Tailwind build
+        run: php bin/console tailwind:build
+
       # Datenbank-Migrations ausführen damit die Tabellen existieren
       - name: Datenbank migrieren
         run: php bin/console doctrine:migrations:migrate --no-interaction
