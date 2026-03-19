@@ -1,7 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 
-// Stimulus Controller für die Meistgespielten Songs.
-// Fetcht Daten vom Stats-Endpoint und rendert custom HTML-Bars.
+// Fetches song play counts and renders horizontal bar chart.
 export default class extends Controller {
     static targets = [
         'playedContainer',
@@ -17,13 +16,10 @@ export default class extends Controller {
             this.statsData = await response.json();
             this.renderPlayedBars();
         } catch (error) {
-            console.error('Fehler beim Laden der Stats:', error);
+            console.error('Failed to load stats:', error);
         }
     }
 
-    // --- Meistgespielte Songs live (Custom HTML-Bars) ---
-    // Song-Name links, Count rechts, farbiger Balken proportional zur Anzahl.
-    // Top 3 mit teal Rang-Badge, Rest mit Nummer.
     renderPlayedBars() {
         const { topPlayed } = this.statsData;
 
@@ -41,7 +37,6 @@ export default class extends Controller {
             const percent = (song.count / maxCount) * 100;
             const rank = i + 1;
 
-            // Top 3 bekommen stärkere Farbe + Rang-Badge
             const isTop3 = rank <= 3;
             const barOpacity = isTop3 ? 0.2 : 0.1;
             const borderOpacity = isTop3 ? 0.5 : 0.25;
@@ -49,7 +44,6 @@ export default class extends Controller {
                 ? `<span class="shrink-0 w-6 h-6 rounded-full bg-accent-600 text-white text-[11px] font-semibold flex items-center justify-center">${rank}</span>`
                 : `<span class="shrink-0 w-6 text-center text-xs text-warm-400">${rank}</span>`;
 
-            // Song-Name: Erster Buchstabe jedes Worts groß (title case)
             const displayName = song.name
                 .split(' ')
                 .map(w => w.charAt(0).toUpperCase() + w.slice(1))

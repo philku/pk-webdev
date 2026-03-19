@@ -4,8 +4,6 @@ interface PlayerCardProps {
     player: Player;
 }
 
-// Card für einen einzelnen Spieler im Roster.
-// Zeigt Headshot, Name, Nummer und Position.
 export function PlayerCard({ player }: PlayerCardProps) {
     return (
         <div className="flex items-center gap-3 rounded-xl border border-warm-200 p-3">

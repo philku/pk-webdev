@@ -11,16 +11,12 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-// Formular für Trainings — bewusst klassischer handleRequest-Flow.
-// Im Kontrast zu MemberForm (Live Component) zeigt das im Portfolio
-// beide Symfony-Patterns: klassisch vs. reaktiv.
+// Classic handleRequest flow — contrasts MemberForm (Live Component) to demo both patterns.
 class TrainingType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            // DateTimeType mit single_text: ein HTML5-Input statt 5 Dropdowns.
-            // Der Browser zeigt automatisch einen Date/Time-Picker.
             ->add('scheduledAt', DateTimeType::class, [
                 'label' => 'Datum & Uhrzeit',
                 'widget' => 'single_text',
@@ -37,9 +33,7 @@ class TrainingType extends AbstractType
             ])
         ;
 
-        // Team-Dropdown nur beim Erstellen anzeigen (nicht beim Bearbeiten).
-        // Beim Edit ist das Team fix — sonst müssten die Attendances
-        // gelöscht und für das neue Team neu erstellt werden.
+        // Team field hidden on edit — changing it would invalidate attendance records.
         if ($options['include_team']) {
             $builder->add('team', EntityType::class, [
                 'label' => 'Team',
@@ -54,8 +48,6 @@ class TrainingType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Training::class,
-            // Custom-Option: steuert ob das Team-Dropdown gezeigt wird.
-            // Default true (Erstellen), beim Edit wird false übergeben.
             'include_team' => true,
         ]);
     }

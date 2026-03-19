@@ -1,5 +1,3 @@
-// TypeScript Interface für einen Eintrag in der NHL-Standings-Tabelle.
-// Die NHL API gibt lokalisierte Namen als { default: string, fr?: string } zurück.
 export interface TeamStanding {
     teamName: { default: string };
     teamCommonName: { default: string };
@@ -25,5 +23,4 @@ export interface StandingsResponse {
     standings: TeamStanding[];
 }
 
-// Filter-Typen für die UI
 export type ConferenceFilter = 'all' | 'Eastern' | 'Western';

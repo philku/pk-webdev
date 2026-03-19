@@ -7,17 +7,13 @@ import { TeamDetail } from './components/TeamDetail'
 import { LoadingSpinner } from './components/LoadingSpinner'
 import { ErrorMessage } from './components/ErrorMessage'
 
-// Root-Komponente: Zeigt entweder die Standings-Tabelle oder eine Team-Detail-Ansicht.
-// Der selectedTeam-State steuert welche Ansicht aktiv ist.
-// Standings werden einmal geladen und client-seitig gefiltert (kein Re-Fetch bei Filter-Wechsel).
+// Fetched once, filtered client-side. selectedTeam toggles between table and detail view.
 export function App() {
     const { standings, loading, error } = useStandings()
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
     const [conference, setConference] = useState<ConferenceFilter>('all')
     const [division, setDivision] = useState('all')
 
-    // Client-seitige Filterung auf dem gecachten Standings-Array.
-    // useMemo verhindert unnötiges Neu-Filtern bei jedem Render.
     const filtered = useMemo(() => {
         let result = standings
         if (conference !== 'all') {
@@ -29,7 +25,6 @@ export function App() {
         return result
     }, [standings, conference, division])
 
-    // Team-Detail: Daten aus dem bereits geladenen Standings-Array holen
     const selectedTeamData = selectedTeam
         ? standings.find((t) => t.teamAbbrev.default === selectedTeam)
         : null
@@ -37,7 +32,6 @@ export function App() {
     if (loading) return <LoadingSpinner />
     if (error) return <ErrorMessage message={error} onRetry={() => window.location.reload()} />
 
-    // Team-Detail-Ansicht
     if (selectedTeamData) {
         return (
             <TeamDetail
@@ -47,7 +41,6 @@ export function App() {
         )
     }
 
-    // Standings-Ansicht
     return (
         <div>
             <div className="mb-4">

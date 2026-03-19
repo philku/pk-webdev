@@ -1,4 +1,3 @@
-// TypeScript Interface für einen NHL-Spieler im Roster.
 export interface Player {
     id: number;
     headshot: string;
@@ -14,8 +13,6 @@ export interface Player {
     birthCountry: string;
 }
 
-// API-Response von /v1/roster/{teamAbbrev}/current
-// Spieler sind bereits nach Position gruppiert.
 export interface RosterResponse {
     forwards: Player[];
     defensemen: Player[];

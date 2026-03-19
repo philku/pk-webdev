@@ -7,49 +7,34 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-// #[ORM\Entity] sagt Doctrine: "Diese Klasse ist eine Datenbanktabelle."
-// repositoryClass verknüpft die Entity mit ihrem Repository.
 #[ORM\Entity(repositoryClass: TeamRepository::class)]
 class Team
 {
-    // Primärschlüssel — auto-increment ID, generiert die DB automatisch.
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    // Spalte "name", max. 100 Zeichen, darf nicht leer sein.
     #[ORM\Column(length: 100)]
     private ?string $name = null;
 
-    // Spalte "sport", max. 50 Zeichen.
     #[ORM\Column(length: 50)]
     private ?string $sport = null;
 
-    // OneToMany = "Ein Team hat viele Members"
-    // mappedBy: 'team' verweist auf die Property $team in der Member-Entity.
-    // cascade: ['persist'] = wenn ich ein Team speichere, werden neue Members mitgespeichert.
-    // orphanRemoval: true = wenn ein Member aus der Collection entfernt wird, wird er auch aus der DB gelöscht.
     /** @var Collection<int, Member> */
     #[ORM\OneToMany(targetEntity: Member::class, mappedBy: 'team', cascade: ['persist'], orphanRemoval: true)]
     private Collection $members;
 
-    // OneToMany zu Training — ein Team hat viele Trainingseinheiten.
-    // Gleiche Struktur wie $members, aber ohne orphanRemoval:
-    // Trainings löschen wir explizit über den Controller (mit CSRF-Schutz).
+    // No orphanRemoval — trainings are deleted explicitly via controller (with CSRF).
     /** @var Collection<int, Training> */
     #[ORM\OneToMany(targetEntity: Training::class, mappedBy: 'team')]
     private Collection $trainings;
 
     public function __construct()
     {
-        // ArrayCollection ist Doctrines "intelligente Liste" — wie ein Array, aber mit Extras.
         $this->members = new ArrayCollection();
         $this->trainings = new ArrayCollection();
     }
-
-    // --- Getter & Setter ---
-    // Doctrine braucht diese, um auf die privaten Properties zuzugreifen.
 
     public function getId(): ?int
     {
@@ -65,7 +50,7 @@ class Team
     {
         $this->name = $name;
 
-        return $this; // "return $this" ermöglicht Method Chaining: $team->setName('A')->setSport('Fußball')
+        return $this;
     }
 
     public function getSport(): ?string
@@ -90,7 +75,7 @@ class Team
     {
         if (!$this->members->contains($member)) {
             $this->members->add($member);
-            $member->setTeam($this); // Setzt auch die Gegenseite der Relation
+            $member->setTeam($this);
         }
 
         return $this;

@@ -7,48 +7,30 @@ use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-// Service für die Spotify Web API (Client Credentials Flow).
-// Holt Album- und Track-Daten für Metallica.
-// Authentifizierung: OAuth 2.0 server-to-server — kein User-Login nötig,
-// weil wir nur öffentliche Artist-Daten lesen.
+// Spotify Web API service (Client Credentials Flow — no user login needed).
 class SpotifyService
 {
-    // Metallica's Spotify-ID — eindeutig und fest, ändert sich nie.
     private const METALLICA_ID = '2ye2Wgw4gimLv2eAKyk1NB';
-
-    // Spotify API Basis-URLs
     private const API_URL = 'https://api.spotify.com/v1';
     private const TOKEN_URL = 'https://accounts.spotify.com/api/token';
-
-    // 30 Tage Cache — Metallica's Discography ändert sich quasi nie.
-    // Gleiches Vorgehen wie beim Konzert-Cache: lange TTL, weil die
-    // Daten sich extrem selten ändern (vielleicht 1x in 5 Jahren ein neues Album).
-    private const CACHE_TTL = 2592000;
+    private const CACHE_TTL = 2592000; // 30 days
 
     public function __construct(
         private HttpClientInterface $httpClient,
         private CacheInterface $cache,
-
-        // Client-ID und Secret kommen aus .env(.local).
-        // Werden beim Token-Request Base64-encoded zusammengefügt.
         #[Autowire(env: 'SPOTIFY_CLIENT_ID')]
         private string $clientId,
-
         #[Autowire(env: 'SPOTIFY_CLIENT_SECRET')]
         private string $clientSecret,
     ) {
     }
 
-    // --- Artist-Info (Followers, Popularity, Genres, Bilder) ---
     public function getArtist(): array
     {
         return $this->apiRequest('/artists/' . self::METALLICA_ID, 'spotify_artist');
     }
 
-    // --- Alle Studio-Alben, sortiert nach Release-Datum ---
-    // include_groups=album filtert Singles, Compilations und Appears-On raus.
-    // Spotify gibt bei Client Credentials nur 5 Alben pro Request zurück
-    // (kein eigenes limit erlaubt), daher paginieren wir mit offset.
+    // Studio albums sorted chronologically, with remastered duplicates filtered out.
     public function getAlbums(): array
     {
         return $this->cache->get('spotify_albums', function (ItemInterface $item) {
@@ -57,12 +39,10 @@ class SpotifyService
             $albums = [];
             $offset = 0;
 
-            // Spotify paginiert Alben — bei Client Credentials max. 5 pro Seite.
-            // Bei Metallica 21 Alben → 5 Requests. Alles gecacht, also egal.
             do {
                 $data = $this->apiRequest(
                     '/artists/' . self::METALLICA_ID . '/albums?include_groups=album&offset=' . $offset,
-                    null // Kein Einzel-Caching, wir cachen das Gesamtergebnis
+                    null
                 );
 
                 foreach ($data['items'] as $album) {
@@ -77,21 +57,17 @@ class SpotifyService
                     ];
                 }
 
-                // Spotify gibt limit im Response zurück (aktuell 5)
                 $limit = $data['limit'];
                 $offset += $limit;
                 $total = $data['total'];
             } while ($data['next'] !== null);
 
-            // Nach Release-Datum sortieren (älteste zuerst = chronologisch)
             usort($albums, fn($a, $b) => $a['release_date'] <=> $b['release_date']);
 
-            // Duplikate rausfiltern: Spotify listet Remastered-Versionen als eigene Alben.
-            // Wir behalten pro Album-Name nur die früheste Version.
+            // Deduplicate remastered/deluxe editions — keep earliest release per album name.
             $seen = [];
             $unique = [];
             foreach ($albums as $album) {
-                // Normalisieren: "(Remastered)", "(Deluxe Edition)" etc. entfernen
                 $normalized = preg_replace('/\s*\(.*?(remaster|deluxe|expanded|bonus).*?\)\s*/i', '', $album['name']);
                 $normalized = trim($normalized);
 
@@ -105,7 +81,6 @@ class SpotifyService
         });
     }
 
-    // --- Ein einzelnes Album mit allen Tracks ---
     public function getAlbum(string $id): array
     {
         return $this->cache->get('spotify_album_' . $id, function (ItemInterface $item) use ($id) {
@@ -113,7 +88,6 @@ class SpotifyService
 
             $data = $this->apiRequest('/albums/' . $id, null);
 
-            // Tracks aufbereiten
             $tracks = [];
             foreach ($data['tracks']['items'] as $track) {
                 $tracks[] = [
@@ -138,8 +112,6 @@ class SpotifyService
         });
     }
 
-    // --- Top-Tracks nach Popularity ---
-    // Spotify liefert maximal 10 Tracks pro Artist.
     public function getTopTracks(): array
     {
         return $this->cache->get('spotify_top_tracks', function (ItemInterface $item) {
@@ -162,19 +134,12 @@ class SpotifyService
         });
     }
 
-    // --- Access Token holen (Client Credentials Flow) ---
-    // OAuth 2.0: POST an Spotify Token-URL mit client_id:client_secret
-    // als Base64-encoded Authorization Header.
-    // Token ist 1h gültig, wir cachen ihn für 3500s (knapp darunter).
+    // OAuth 2.0 Client Credentials — token cached with safety margin before expiry.
     private function getAccessToken(): string
     {
         return $this->cache->get('spotify_access_token', function (ItemInterface $item) {
-            // 3500s statt 3600s — Sicherheitspuffer, damit der Token
-            // nicht genau dann abläuft, wenn wir ihn gerade benutzen.
-            $item->expiresAfter(3500);
+            $item->expiresAfter(3500); // 3500s of 3600s expiry
 
-            // Base64-Encoding von "client_id:client_secret"
-            // Das ist der Standard für HTTP Basic Auth im OAuth-Flow.
             $credentials = base64_encode($this->clientId . ':' . $this->clientSecret);
 
             $response = $this->httpClient->request('POST', self::TOKEN_URL, [
@@ -185,20 +150,12 @@ class SpotifyService
                 'body' => 'grant_type=client_credentials',
             ]);
 
-            $data = $response->toArray();
-
-            return $data['access_token'];
+            return $response->toArray()['access_token'];
         });
     }
 
-    // --- API-Request mit Bearer Token und Retry-Logik ---
-    // Zwei Retry-Szenarien:
-    //   429 = Rate Limit → warten und nochmal versuchen
-    //   401 = Token abgelaufen → Token-Cache löschen, neuen holen, nochmal versuchen
     private function apiRequest(string $endpoint, ?string $cacheKey): array
     {
-        // Wenn ein Cache-Key angegeben wurde, cachen wir das Ergebnis.
-        // Bei null wird direkt der API-Call gemacht (für verschachtelte Calls).
         if ($cacheKey !== null) {
             return $this->cache->get($cacheKey, function (ItemInterface $item) use ($endpoint) {
                 $item->expiresAfter(self::CACHE_TTL);
@@ -209,13 +166,12 @@ class SpotifyService
         return $this->doRequest($endpoint);
     }
 
-    // --- Der eigentliche HTTP-Request mit Retry-Logik ---
+    // HTTP request with retry logic for 429 (rate limit) and 401 (expired token).
     private function doRequest(string $endpoint, int $attempt = 1): array
     {
         $maxRetries = 3;
         $token = $this->getAccessToken();
 
-        // Volle URL oder nur Endpoint? (für Pagination-URLs die schon voll sind)
         $url = str_starts_with($endpoint, 'https://') ? $endpoint : self::API_URL . $endpoint;
 
         $response = $this->httpClient->request('GET', $url, [
@@ -230,26 +186,17 @@ class SpotifyService
             return $response->toArray();
         }
 
-        // 429 = Rate Limit → warten und erneut versuchen
         if ($statusCode === 429 && $attempt < $maxRetries) {
-            // Retry-After Header gibt an, wie lange wir warten sollen
             $retryAfter = (int) ($response->getHeaders(false)['retry-after'][0] ?? 1);
             sleep($retryAfter);
             return $this->doRequest($endpoint, $attempt + 1);
         }
 
-        // 401 = Token abgelaufen → Cache löschen, neuen Token holen, nochmal versuchen
         if ($statusCode === 401 && $attempt < $maxRetries) {
             $this->cache->delete('spotify_access_token');
             return $this->doRequest($endpoint, $attempt + 1);
         }
 
-        // Andere Fehler oder letzte Retry-Chance → Exception werfen.
-        // Wird vom Controller gefangen → Seite zeigt gecachte Daten oder leere Section.
-        throw new \RuntimeException(sprintf(
-            'Spotify API Fehler: HTTP %d für %s',
-            $statusCode,
-            $url
-        ));
+        throw new \RuntimeException(sprintf('Spotify API error: HTTP %d for %s', $statusCode, $url));
     }
 }

@@ -14,8 +14,6 @@ class Member
     #[ORM\Column]
     private ?int $id = null;
 
-    // Assert-Attribute = Validierungsregeln.
-    // Symfony prüft diese automatisch, wenn ein Formular abgeschickt wird.
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank(message: 'Bitte einen Namen eingeben.')]
     private ?string $name = null;
@@ -25,33 +23,23 @@ class Member
     #[Assert\Email(message: 'Bitte eine gültige E-Mail eingeben.')]
     private ?string $email = null;
 
-    // nullable: true = dieses Feld darf in der DB leer sein.
     #[ORM\Column(length: 30, nullable: true)]
     private ?string $phone = null;
 
-    // Position im Team, z.B. "Stürmer", "Torwart"
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $position = null;
 
-    // Rolle im Verein, z.B. "Spieler", "Trainer", "Betreuer"
     #[ORM\Column(length: 50)]
     #[Assert\NotBlank(message: 'Bitte eine Rolle auswählen.')]
     private ?string $role = null;
 
-    // Typ "date" = nur Datum ohne Uhrzeit.
-    // nullable: true, weil man das Beitrittsdatum vielleicht nicht immer kennt.
     #[ORM\Column(type: 'date', nullable: true)]
     private ?\DateTimeInterface $joinedAt = null;
 
-    // ManyToOne = "Viele Members gehören zu einem Team"
-    // Das ist die Gegenseite von Team::$members (OneToMany).
-    // inversedBy: 'members' verweist auf die Property $members in der Team-Entity.
     #[ORM\ManyToOne(targetEntity: Team::class, inversedBy: 'members')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'Bitte ein Team auswählen.')]
     private ?Team $team = null;
-
-    // --- Getter & Setter ---
 
     public function getId(): ?int
     {

@@ -8,15 +8,13 @@ interface TeamDetailProps {
     onBack: () => void;
 }
 
-// Team-Detail-Ansicht: Header mit Logo + Record, darunter der Roster
-// gruppiert nach Position (Forwards, Defense, Goalies).
 export function TeamDetail({ team, onBack }: TeamDetailProps) {
     const abbrev = team.teamAbbrev.default
     const { roster, loading, error } = useRoster(abbrev)
 
     return (
         <div>
-            {/* Zurück-Button */}
+            {/* Back */}
             <button
                 onClick={onBack}
                 className="cursor-pointer inline-block rounded-lg border border-warm-300 px-5 py-2.5 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100"
@@ -24,7 +22,7 @@ export function TeamDetail({ team, onBack }: TeamDetailProps) {
                 &larr; Zurück zur Tabelle
             </button>
 
-            {/* Team-Header */}
+            {/* Header */}
             <div className="mt-6 flex items-center gap-4">
                 <img
                     src={team.teamLogo}

@@ -1,6 +1,3 @@
-# CI-Pipeline: Läuft bei jedem Push auf main und bei Pull Requests.
-# Prüft ob Tests grün sind und ob alle Assets gebaut werden können.
-
 name: CI
 
 on:
@@ -9,22 +6,15 @@ on:
   pull_request:
     branches: [main]
 
-# Node.js 24 für GitHub Actions — ab Juni 2026 Pflicht,
-# wir stellen jetzt schon um damit keine Deprecation-Warnings kommen.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ==================== PHP TESTS ====================
-  # Fährt MariaDB + Redis als Service-Container hoch,
-  # installiert PHP 8.4 + Composer, baut Tailwind, führt Migrations aus, startet PHPUnit.
   tests:
     name: PHPUnit Tests
     runs-on: ubuntu-latest
 
     services:
-      # MariaDB 11.8 — gleiche Version wie im DDEV-Setup.
-      # GitHub Actions startet das als Docker-Container neben unserem Job.
       mariadb:
         image: mariadb:11.8
         env:
@@ -32,15 +22,12 @@ jobs:
           MARIADB_DATABASE: pkwebdev_test
         ports:
           - 3306:3306
-        # Healthcheck: Wartet bis MariaDB wirklich bereit ist,
-        # damit die Tests nicht gegen eine noch startende DB laufen.
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
-      # Redis 7 — für den Cache (Metallica Konzerte etc.)
       redis:
         image: redis:7
         ports:
@@ -51,8 +38,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-    # Env-Vars auf Job-Level — gelten für alle Steps,
-    # statt sie pro Step zu wiederholen.
     env:
       APP_ENV: test
       APP_SECRET: '$ecretf0rt3st'
@@ -68,22 +53,15 @@ jobs:
       GEMINI_MODEL: gemini-3.1-flash-lite-preview
 
     steps:
-      # Code aus dem Repo auschecken
       - uses: actions/checkout@v4
 
-      # PHP 8.4 installieren mit den Extensions die Symfony braucht.
-      # setup-php cached Composer-Downloads automatisch wenn man es aktiviert —
-      # besser als vendor/ manuell zu cachen.
-      - name: PHP 8.4 einrichten
+      - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: ctype, iconv, intl, mbstring, xml, curl, redis
           tools: composer:v2
 
-      # Composer-Cache: cached ~/.composer/cache (Download-Cache),
-      # nicht vendor/ — so werden Package-Downloads wiederverwendet
-      # auch wenn sich composer.lock ändert.
       - name: Composer Cache
         uses: actions/cache@v4
         with:
@@ -91,32 +69,22 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      # Dependencies installieren (inkl. dev-Dependencies für PHPUnit).
-      # --no-progress reduziert Log-Noise in der CI.
       - name: Composer install
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      # Tailwind CSS bauen — die Tests rendern Twig-Templates,
-      # und base.html.twig bindet das Tailwind-Asset ein.
-      # --minify prüft gleichzeitig ob der minifizierte Build funktioniert.
+      # Tests render Twig templates that reference the Tailwind asset.
       - name: Tailwind build
         run: php bin/console tailwind:build --minify
 
-      # Datenbank-Migrations ausführen damit die Tabellen existieren
-      - name: Datenbank migrieren
+      - name: Run migrations
         run: php bin/console doctrine:migrations:migrate --no-interaction
 
-      # Prüft ob PHP-Dependencies bekannte Sicherheitslücken haben.
-      # Vergleicht composer.lock gegen die PHP Security Advisories Datenbank.
       - name: Composer Security Audit
         run: composer audit
 
-      # PHPUnit starten — alle Tests im tests/ Ordner
-      - name: PHPUnit ausführen
+      - name: Run PHPUnit
         run: vendor/bin/phpunit
 
-  # ==================== NHL REACT BUILD ====================
-  # Prüft ob der TypeScript-Check und Vite-Build für die React-App funktionieren.
   nhl-build:
     name: NHL React Build
     runs-on: ubuntu-latest
@@ -124,28 +92,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Node.js 24 einrichten
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
           cache-dependency-path: nhl-standings/package-lock.json
 
-      # npm ci = "clean install" — installiert exakt die Versionen aus package-lock.json.
-      # Schneller und reproduzierbarer als npm install.
       - name: npm ci
         run: npm ci
         working-directory: nhl-standings
 
-      # Prüft ob Node-Dependencies bekannte Sicherheitslücken haben.
-      # --audit-level=high ignoriert Low/Moderate — sonst schlägt npm audit
-      # bei fast jedem Projekt fehl wegen harmloser Findings.
       - name: npm Security Audit
         run: npm audit --audit-level=high
         working-directory: nhl-standings
 
-      # "npm run build" führt erst tsc --noEmit (TypeScript-Check) aus,
-      # dann den Vite-Build der das JS-Bundle nach public/nhl-build/ schreibt.
       - name: Build
         run: npm run build
         working-directory: nhl-standings

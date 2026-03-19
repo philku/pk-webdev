@@ -6,9 +6,6 @@ interface TeamRowProps {
     onSelect: (teamAbbrev: string) => void;
 }
 
-// Eine Zeile in der Standings-Tabelle.
-// Zeigt Rang, Team-Logo + Name, und die wichtigsten Stats.
-// Klick auf die Zeile öffnet die Team-Detail-Ansicht.
 export function TeamRow({ team, rank, onSelect }: TeamRowProps) {
     const abbrev = team.teamAbbrev.default
 

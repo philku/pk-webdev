@@ -6,10 +6,7 @@ interface StandingsTableProps {
     onSelectTeam: (teamAbbrev: string) => void;
 }
 
-// Standings-Tabelle: Sortiert nach Liga-Platzierung (leagueSequence).
-// Responsive: GD und Streak werden auf Mobile ausgeblendet.
 export function StandingsTable({ standings, onSelectTeam }: StandingsTableProps) {
-    // Sortierung nach leagueSequence (die API liefert das bereits korrekt)
     const sorted = [...standings].sort((a, b) => a.leagueSequence - b.leagueSequence)
 
     return (

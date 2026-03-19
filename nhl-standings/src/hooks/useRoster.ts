@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { RosterResponse } from '../types/roster'
 
-// Custom Hook: Lädt den Roster eines Teams anhand des Kürzels (z.B. "BOS", "TOR").
-// Fetcht neu wenn sich teamAbbrev ändert.
-// AbortController bricht laufende Requests ab wenn schnell zwischen Teams gewechselt wird.
+// Re-fetches when teamAbbrev changes. Aborts in-flight requests on rapid switches.
 export function useRoster(teamAbbrev: string) {
     const [roster, setRoster] = useState<RosterResponse | null>(null)
     const [loading, setLoading] = useState(true)

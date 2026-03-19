@@ -1,6 +1,3 @@
-# Manuelles Deployment auf Production.
-# Trigger: Nur per Hand über GitHub Actions UI (workflow_dispatch Button).
-
 name: Deploy Production
 
 on:

@@ -3,10 +3,7 @@ import type { TeamStanding } from '../types/standings'
 
 const API_URL = '/api/nhl/standings'
 
-// Custom Hook: Lädt die NHL-Standings einmal beim Mount.
-// Gibt typisierte Daten, Loading-State und Fehler zurück.
-// Filter (Conference, Division) passiert client-seitig auf dem gecachten Array —
-// kein neuer API-Call nötig.
+// Fetches once on mount — filtering happens client-side on the cached array.
 export function useStandings() {
     const [standings, setStandings] = useState<TeamStanding[]>([])
     const [loading, setLoading] = useState(true)
@@ -38,7 +35,6 @@ export function useStandings() {
 
         fetchStandings()
 
-        // Cleanup: laufenden Request abbrechen wenn die Komponente unmountet
         return () => controller.abort()
     }, [])
 

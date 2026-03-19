@@ -10,21 +10,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-// Controller für die Metallica Universe Seite.
-// Liefert die HTML-Seite, Konzertdaten, und Discography-Daten.
 #[Route('/metallica')]
 class MetallicaController extends AbstractController
 {
-    // ---------- Hauptseite: Karte + Discography ----------
-    // Kombiniert Konzertkarte und Discography auf einer Seite.
-    // Spotify-Daten (Alben, Artist-Info) werden server-side gerendert,
-    // die Konzertdaten kommen asynchron per JSON (Stimulus Controller).
+    // Combines concert map and discography on one page.
+    // Spotify data (albums) is server-rendered; concerts load async via Stimulus.
     #[Route('', name: 'app_metallica')]
     public function index(SpotifyService $spotify): Response
     {
-        // try/catch: Wenn Spotify down ist oder 400/500 zurückgibt,
-        // zeigt die Seite einfach keine Alben an statt komplett zu crashen.
-        // Karte und Songs funktionieren trotzdem (kommen von setlist.fm).
         try {
             $albums = $spotify->getAlbums();
         } catch (\Throwable) {
@@ -36,23 +29,19 @@ class MetallicaController extends AbstractController
         ]);
     }
 
-    // ---------- JSON-Endpoint für die Kartendaten ----------
-    // Drei Modi:
-    //   1. Mit ?page=X → eine Seite (progressives Laden bei Cold Start)
-    //   2. Ohne ?page + Full-Cache → Delta-Check (1 API-Call), ggf. neue Konzerte nachladen
-    //   3. Ohne ?page + kein Cache → erste Seite liefern, Frontend lädt progressiv nach
+    // JSON endpoint for concert map data. Three modes:
+    //   1. ?page=X → paginated (progressive loading on cold start)
+    //   2. No ?page + full cache → delta check (1 API call), merge new concerts
+    //   3. No ?page + no cache → return page 1, frontend loads remaining pages
     #[Route('/api/concerts', name: 'app_metallica_concerts')]
     public function concerts(SetlistFmService $setlistFm, Request $request): JsonResponse
     {
         $page = $request->query->getInt('page', 0);
 
-        // --- Modus 1: Paginierter Request (?page=X) ---
-        // Wird vom Frontend beim progressiven Laden benutzt (Cold Start).
         if ($page > 0) {
             $data = $setlistFm->getMapConcertsPage($page);
 
-            // Letzte Seite erreicht → Full-Cache für nächsten Besuch bauen.
-            // buildFullMapCache() liest nur aus den Seiten-Caches (keine API-Calls).
+            // Last page reached — build full cache from page caches (no API calls).
             if ($page >= $data['totalPages']) {
                 $setlistFm->buildFullMapCache($data['totalPages'], $data['total']);
             }
@@ -60,12 +49,7 @@ class MetallicaController extends AbstractController
             return $this->json($data);
         }
 
-        // --- Modus 2: Kein ?page → Full-Cache + Delta-Check ---
-        // checkForNewConcerts() macht intern:
-        //   - Full-Cache lesen → total vergleichen (1 API-Call)
-        //   - Gleich → TTL refreshen (30 Tage neu), Cache zurückgeben
-        //   - Höher → Delta-Konzerte nachladen, Cache erweitern
-        //   - Kein Cache → null (Fall-through zu Progressive Loading)
+        // Full cache exists → delta check (compare totals, merge if needed).
         $allConcerts = $setlistFm->checkForNewConcerts();
 
         if ($allConcerts !== null) {
@@ -75,17 +59,13 @@ class MetallicaController extends AbstractController
             ]);
         }
 
-        // --- Modus 3: Kein Cache (Cold Start) → Progressive Loading ---
-        // Erste Seite liefern + Signal für progressives Laden.
-        // Das Frontend sieht 'complete' => false und startet die Pagination ab Seite 2.
+        // Cold start → progressive loading from page 1.
         $data = $setlistFm->getMapConcertsPage(1);
         $data['complete'] = false;
 
         return $this->json($data);
     }
 
-    // ---------- Setlist-Detail ----------
-    // Zeigt die komplette Setlist eines einzelnen Konzerts.
     #[Route('/setlist/{id}', name: 'app_metallica_setlist')]
     public function setlist(string $id, SetlistFmService $setlistFm): Response
     {
@@ -100,7 +80,6 @@ class MetallicaController extends AbstractController
         ]);
     }
 
-    // ---------- Discography: Album-Detail mit Tracklist ----------
     #[Route('/discography/album/{id}', name: 'app_metallica_album')]
     public function album(string $id, SpotifyService $spotify): Response
     {
@@ -115,8 +94,7 @@ class MetallicaController extends AbstractController
         ]);
     }
 
-    // ---------- Meistgespielte Songs als JSON ----------
-    // Liefert die Top 20 Songs nach Live-Play-Count für den Stimulus Controller.
+    // Top 10 most-played songs by live play count.
     #[Route('/api/discography/stats', name: 'app_metallica_discography_stats')]
     public function discographyStats(SetlistFmService $setlistFm): JsonResponse
     {

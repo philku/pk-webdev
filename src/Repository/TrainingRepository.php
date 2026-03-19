@@ -17,12 +17,7 @@ class TrainingRepository extends ServiceEntityRepository
         parent::__construct($registry, Training::class);
     }
 
-    // Alle Trainings eines Teams, sortiert nach Datum (neueste zuerst).
-    // orderBy DESC: Der Trainer will zuerst das nächste anstehende Training sehen,
-    // nicht das älteste aus der Vergangenheit.
-    /**
-     * @return Training[]
-     */
+    /** @return Training[] */
     public function findByTeam(Team $team): array
     {
         return $this->findBy(

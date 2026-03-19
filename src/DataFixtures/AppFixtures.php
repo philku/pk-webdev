@@ -13,7 +13,6 @@ class AppFixtures extends Fixture
 {
     public function load(ObjectManager $manager): void
     {
-        // --- Teams erstellen ---
         $teamA = new Team();
         $teamA->setName('Erste Mannschaft');
         $teamA->setSport('Fußball');
@@ -26,13 +25,10 @@ class AppFixtures extends Fixture
         $teamC->setName('Lauftreff');
         $teamC->setSport('Leichtathletik');
 
-        // persist() = "Doctrine, merk dir dieses Objekt, das soll in die DB."
-        // Es wird aber noch NICHT gespeichert — das passiert erst bei flush().
         $manager->persist($teamA);
         $manager->persist($teamB);
         $manager->persist($teamC);
 
-        // --- Members erstellen ---
         $members = [
             ['Max Müller', 'max@example.com', '0171-1234567', 'Torwart', 'Spieler', $teamA],
             ['Lisa Schmidt', 'lisa@example.com', '0172-2345678', 'Stürmerin', 'Spieler', $teamA],
@@ -48,8 +44,6 @@ class AppFixtures extends Fixture
             ['Nina Lange', 'nina@example.com', null, null, 'Betreuer', $teamC],
         ];
 
-        // Member-Objekte sammeln, damit wir sie für Attendances wiederverwenden können.
-        // Gruppiert nach Team, weil Attendances teamweise zugeordnet werden.
         $membersByTeam = [];
 
         foreach ($members as [$name, $email, $phone, $position, $role, $team]) {
@@ -64,15 +58,11 @@ class AppFixtures extends Fixture
 
             $manager->persist($member);
 
-            // Member dem Team-Array zuordnen für spätere Attendance-Erstellung
             $teamId = spl_object_id($team);
             $membersByTeam[$teamId][] = $member;
         }
 
-        // --- Trainings erstellen ---
-        // Realistische Daten: ein Mix aus vergangenen und zukünftigen Trainings.
         $trainings = [
-            // [Team, Tage-Offset, Uhrzeit, Ort, Beschreibung]
             [$teamA, -14, '18:00', 'Sportplatz Süd', 'Taktiktraining'],
             [$teamA, -7, '18:00', 'Sportplatz Süd', 'Spielvorbereitung'],
             [$teamA, 0, '18:30', 'Sporthalle Nord', 'Konditionstraining'],
@@ -81,8 +71,7 @@ class AppFixtures extends Fixture
             [$teamB, -3, '16:30', 'Kunstrasenplatz', 'Spielformen'],
         ];
 
-        // Mögliche Status-Werte für die Anwesenheit.
-        // Gewichtung: 60% anwesend, 25% abwesend, 15% entschuldigt — realistisch.
+        // Weighted distribution: ~60% present, ~25% absent, ~15% excused.
         $statuses = ['anwesend', 'anwesend', 'anwesend', 'anwesend', 'anwesend', 'anwesend',
                      'abwesend', 'abwesend', 'abwesend',
                      'entschuldigt', 'entschuldigt'];
@@ -96,23 +85,17 @@ class AppFixtures extends Fixture
 
             $manager->persist($training);
 
-            // Für jedes Mitglied im Team einen Anwesenheitseintrag erstellen.
-            // Das passiert auch im echten Controller beim Training-Erstellen:
-            // Alle Team-Mitglieder bekommen automatisch einen Eintrag (default: 'abwesend').
             $teamId = spl_object_id($team);
             foreach ($membersByTeam[$teamId] ?? [] as $member) {
                 $attendance = new TrainingAttendance();
                 $attendance->setTraining($training);
                 $attendance->setMember($member);
-                // Zufälliger Status für realistische Demo-Daten
                 $attendance->setStatus($statuses[array_rand($statuses)]);
 
                 $manager->persist($attendance);
             }
         }
 
-        // flush() = "Jetzt alles auf einmal in die DB schreiben."
-        // Doctrine sammelt alle persist()-Aufrufe und macht dann EIN großes INSERT.
         $manager->flush();
     }
 }

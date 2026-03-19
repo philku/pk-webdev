@@ -10,8 +10,6 @@ use Symfony\UX\LiveComponent\Attribute\LiveProp;
 use Symfony\UX\LiveComponent\Attribute\PreReRender;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
 
-// Diese Live Component steuert Suche, Sortierung und Paginierung
-// auf der Vereinsplaner-Seite — alles ohne Page Reload.
 #[AsLiveComponent]
 class MemberSearch
 {
@@ -19,20 +17,15 @@ class MemberSearch
 
     private const PER_PAGE = 5;
 
-    // writable: true = dieses Property kann vom Browser geändert werden.
-    // Wenn der User ins Suchfeld tippt, wird `query` automatisch aktualisiert.
     #[LiveProp(writable: true)]
     public string $query = '';
 
-    // Sortierfeld: nach welcher Spalte sortiert wird (name, email, team, role).
     #[LiveProp(writable: true)]
     public string $sortBy = 'name';
 
-    // Sortierrichtung: ASC (aufsteigend) oder DESC (absteigend).
     #[LiveProp(writable: true)]
     public string $sortDirection = 'ASC';
 
-    // Aktuelle Seite für die Paginierung.
     #[LiveProp(writable: true)]
     public int $page = 1;
 
@@ -41,37 +34,27 @@ class MemberSearch
     ) {
     }
 
-    // LiveAction: Wird aufgerufen wenn der User auf eine Spaltenüberschrift klickt.
-    // Wenn dieselbe Spalte nochmal geklickt wird, dreht sich die Richtung um.
-    // Bei einer neuen Spalte wird auf ASC zurückgesetzt.
+    // Toggles direction on same column, resets to ASC on new column.
     #[LiveAction]
-    // #[LiveArg] = erlaubt Symfony, den Wert aus dem Browser-Request zu lesen.
-    // Ohne dieses Attribut weiß Symfony nicht, woher $field kommen soll.
     public function sort(#[LiveArg] string $field): void
     {
         if ($this->sortBy === $field) {
-            // Gleiche Spalte nochmal geklickt → Richtung umdrehen
             $this->sortDirection = 'ASC' === $this->sortDirection ? 'DESC' : 'ASC';
         } else {
-            // Neue Spalte → aufsteigend starten
             $this->sortBy = $field;
             $this->sortDirection = 'ASC';
         }
 
-        // Bei neuer Sortierung zurück auf Seite 1
         $this->page = 1;
     }
 
-    // LiveAction: Wird aufgerufen wenn der User auf eine Seitenzahl klickt.
     #[LiveAction]
     public function goToPage(#[LiveArg] int $page): void
     {
         $this->page = $page;
     }
 
-    // Wird vor jedem Re-Render aufgerufen.
-    // Stellt sicher, dass die Seite nicht höher ist als die letzte Seite.
-    // z.B. wenn man auf Seite 3 war und dann sucht → nur noch 1 Seite Ergebnisse → zurück auf 1.
+    // Clamp page when search narrows results.
     #[PreReRender]
     public function ensureValidPage(): void
     {
@@ -81,11 +64,7 @@ class MemberSearch
         }
     }
 
-    /**
-     * Gibt die gefilterten, sortierten und paginierten Mitglieder zurück.
-     *
-     * @return \App\Entity\Member[]
-     */
+    /** @return \App\Entity\Member[] */
     public function getMembers(): array
     {
         return $this->memberRepository->search(
@@ -97,17 +76,11 @@ class MemberSearch
         );
     }
 
-    /**
-     * Gesamtzahl der Treffer (für Paginierung und Anzeige).
-     */
     public function getTotal(): int
     {
         return $this->memberRepository->countSearch($this->query);
     }
 
-    /**
-     * Letzte mögliche Seite.
-     */
     public function getLastPage(): int
     {
         return max(1, (int) ceil($this->getTotal() / self::PER_PAGE));

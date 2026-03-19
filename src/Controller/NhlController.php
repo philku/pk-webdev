@@ -21,8 +21,7 @@ class NhlController extends AbstractController
         return $this->render('nhl/index.html.twig');
     }
 
-    // Proxy für die NHL Standings API — umgeht CORS-Einschränkungen.
-    // React fetcht /api/nhl/standings statt direkt api-web.nhle.com.
+    // CORS proxy for the NHL API — React fetches from here instead of api-web.nhle.com.
     #[Route('/api/nhl/standings', name: 'api_nhl_standings')]
     public function standings(): JsonResponse
     {
@@ -31,7 +30,6 @@ class NhlController extends AbstractController
         return new JsonResponse($response->toArray(), $response->getStatusCode());
     }
 
-    // Proxy für die NHL Roster API — lädt den Kader eines Teams.
     #[Route('/api/nhl/roster/{abbrev}', name: 'api_nhl_roster')]
     public function roster(string $abbrev): JsonResponse
     {

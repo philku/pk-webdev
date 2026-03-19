@@ -21,19 +21,14 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/vereinsplaner')]
 class ClubPlannerController extends AbstractController
 {
-    // ---------- Liste ----------
-    // Die Mitgliederliste wird jetzt von der Live Component "MemberSearch" gerendert.
-    // Der Controller liefert nur noch die Seite aus — die Daten holt die Komponente selbst.
+    // Member list — rendered by the MemberSearch Live Component.
     #[Route('', name: 'app_club_planner')]
     public function index(): Response
     {
         return $this->render('club_planner/index.html.twig');
     }
 
-    // ---------- Neues Mitglied erstellen ----------
-    // Die Formular-Logik (Validierung, Speichern) steckt jetzt in der
-    // Live Component "MemberForm". Der Controller liefert nur noch die
-    // Seite mit dem leeren Formular aus.
+    // Form logic handled by the MemberForm Live Component.
     #[Route('/neu', name: 'app_club_planner_new')]
     public function new(): Response
     {
@@ -46,9 +41,6 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Mitglied bearbeiten ----------
-    // Auch hier: die eigentliche Logik steckt in der Live Component.
-    // Der Controller liefert nur die Seite mit dem befüllten Formular.
     #[Route('/{id}/bearbeiten', name: 'app_club_planner_edit')]
     public function edit(Member $member): Response
     {
@@ -59,10 +51,7 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Mitglied löschen ----------
-    // Lösch-Limits: Mind. 7 Mitglieder insgesamt (damit Pagination sichtbar bleibt)
-    // und mind. 2 Mitglieder pro Team. Limits existieren zu Demo-Zwecken,
-    // damit der Vereinsplaner immer genug Daten zum Anzeigen hat.
+    // Demo limits: min 7 members total (pagination), min 2 per team.
     #[Route('/{id}/loeschen', name: 'app_club_planner_delete', methods: ['POST'])]
     public function delete(Member $member, Request $request, EntityManagerInterface $em, MemberRepository $memberRepo): Response
     {
@@ -84,18 +73,14 @@ class ClubPlannerController extends AbstractController
         return $this->redirectToRoute('app_club_planner');
     }
 
-    // ==================== TRAININGSPLANER ====================
+    // ==================== TRAINING ====================
 
-    // ---------- Trainingsliste (gruppiert nach Team) ----------
-    // Zeigt alle Trainings, gruppiert nach ihrem Team.
-    // findByTeam() liefert sie schon nach Datum sortiert (neueste zuerst).
+    // Trainings grouped by team. Pre-loads per team to avoid N+1 queries.
     #[Route('/trainings', name: 'app_trainings')]
     public function trainings(TeamRepository $teamRepo, TrainingRepository $trainingRepo): Response
     {
         $teams = $teamRepo->findAll();
 
-        // Trainings pro Team vorladen — verhindert N+1 Queries.
-        // Ohne das würde Twig für jedes Team einen eigenen Query abfeuern.
         $trainingsByTeam = [];
         foreach ($teams as $team) {
             $trainingsByTeam[$team->getId()] = $trainingRepo->findByTeam($team);
@@ -107,33 +92,23 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Neues Training erstellen ----------
-    // Klassischer handleRequest-Flow — bewusst KEIN Live Component,
-    // damit im Portfolio beide Patterns sichtbar sind.
-    // Nach dem Speichern: Für jedes Team-Mitglied automatisch einen
-    // Anwesenheitseintrag erstellen (Default: 'abwesend').
+    // Classic handleRequest flow (no Live Component — showcases both patterns).
+    // Creates attendance records for all team members on save.
     #[Route('/trainings/neu', name: 'app_training_new')]
     public function trainingNew(Request $request, EntityManagerInterface $em): Response
     {
         $training = new Training();
         $form = $this->createForm(TrainingType::class, $training);
-
-        // handleRequest() liest die POST-Daten und befüllt das Training-Objekt.
-        // isSubmitted() + isValid() prüft ob Daten da sind UND Validierung passt.
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($training);
 
-            // Für jedes Mitglied im gewählten Team einen Anwesenheitseintrag erstellen.
-            // Das ist der Moment wo die Pivot-Entity zum Einsatz kommt:
-            // Jeder Member bekommt einen Eintrag mit Status 'abwesend'.
-            // Der Trainer ändert den Status dann auf der Anwesenheits-Seite.
+            // Create attendance record (default: absent) for each team member.
             foreach ($training->getTeam()->getMembers() as $member) {
                 $attendance = new TrainingAttendance();
                 $attendance->setTraining($training);
                 $attendance->setMember($member);
-                // Status ist per Default 'abwesend' (in der Entity definiert)
                 $em->persist($attendance);
             }
 
@@ -149,13 +124,10 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Training bearbeiten ----------
-    // Team-Feld ist hier nicht änderbar (include_team: false),
-    // weil ein Team-Wechsel die Attendances ungültig machen würde.
+    // Team field disabled on edit — changing it would invalidate attendance records.
     #[Route('/trainings/{id}/bearbeiten', name: 'app_training_edit')]
     public function trainingEdit(Training $training, Request $request, EntityManagerInterface $em): Response
     {
-        // include_team: false → Team-Dropdown wird nicht angezeigt
         $form = $this->createForm(TrainingType::class, $training, [
             'include_team' => false,
         ]);
@@ -176,9 +148,7 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Training löschen ----------
-    // Lösch-Limit: Mind. 3 Trainings pro Team, damit die Trainingsquote
-    // sinnvolle Daten zeigen kann. Limit existiert zu Demo-Zwecken.
+    // Demo limit: min 3 trainings per team (for meaningful attendance stats).
     #[Route('/trainings/{id}/loeschen', name: 'app_training_delete', methods: ['POST'])]
     public function trainingDelete(Training $training, Request $request, EntityManagerInterface $em, TrainingRepository $trainingRepo): Response
     {
@@ -197,11 +167,8 @@ class ClubPlannerController extends AbstractController
         return $this->redirectToRoute('app_trainings');
     }
 
-    // ---------- Anwesenheit erfassen ----------
-    // GET: Zeigt alle Mitglieder mit ihrem aktuellen Status (Select-Dropdown).
-    // POST: Speichert die geänderten Status-Werte.
-    // Kein Symfony CollectionType — wäre Overengineering für simple Select-Felder.
-    // Stattdessen: manuelles HTML-Formular mit <select name="status[{memberId}]">.
+    // GET: shows attendance form with status dropdowns per member.
+    // POST: saves updated statuses. Uses manual HTML form (no CollectionType).
     #[Route('/trainings/{id}/anwesenheit', name: 'app_training_attendance')]
     public function attendance(
         Training $training,
@@ -211,9 +178,7 @@ class ClubPlannerController extends AbstractController
     ): Response {
         $attendances = $attendanceRepo->findByTraining($training);
 
-        // POST: Status-Werte aus dem Formular speichern
         if ($request->isMethod('POST')) {
-            // $statusData = ['memberId' => 'anwesend', 'memberId' => 'abwesend', ...]
             $statusData = $request->request->all('status');
 
             foreach ($attendances as $attendance) {
@@ -236,9 +201,7 @@ class ClubPlannerController extends AbstractController
         ]);
     }
 
-    // ---------- Trainingsquote pro Team ----------
-    // Zeigt für jedes Mitglied: Wie viele Trainings, wie oft anwesend, Prozent.
-    // Die Aggregation passiert im Repository (DQL mit COUNT, SUM CASE WHEN, GROUP BY).
+    // Attendance stats per member (aggregated in repository via DQL).
     #[Route('/trainings/quote/{id}', name: 'app_training_quote')]
     public function quote(Team $team, TrainingAttendanceRepository $attendanceRepo): Response
     {

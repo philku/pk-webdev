@@ -1,28 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 
-/*
- * Stimulus Controller für den KI Game Berater.
- *
- * Steuert den gesamten User Flow:
- * 1. Plattform wählen (klickbare Cards)
- * 2. Games auswählen (Quick-Pick Cards + Suchfeld mit Autocomplete)
- * 3. KI-Empfehlung anfordern (SSE Stream)
- *
- * Targets:
- *   - platform:     Die Plattform-Buttons
- *   - gameSection:  Container für Game-Auswahl (initial hidden)
- *   - searchInput:  Das Autocomplete-Suchfeld
- *   - searchResults: Dropdown mit Suchergebnissen
- *   - selectedList: Anzeige der ausgewählten Games (Pills)
- *   - submitButton: Der "Was sollen wir zocken?" Button
- *   - resultSection: Container für das KI-Ergebnis (initial hidden)
- *   - resultText:   Div wo der gestreamte Text reinkommt
- *   - loading:      Lade-Animation während KI generiert
- *
- * Values:
- *   - searchUrl:    URL zum Suche-Endpoint (/ki-game-berater/api/search)
- *   - recommendUrl: URL zum Empfehlungs-Endpoint (/ki-game-berater/api/recommend)
- */
+// Multi-step flow: platform → player count → game selection → LLM recommendation (SSE).
 export default class extends Controller {
     static targets = [
         'platform', 'playerSection', 'playerCount', 'gameSection', 'searchInput', 'searchResults',
@@ -35,24 +13,16 @@ export default class extends Controller {
     };
 
     connect() {
-        // Zustand: welche Plattform gewählt, Spieleranzahl, welche Games ausgewählt
         this.selectedPlatform = null;
         this.selectedPlayerCount = null;
-        this.selectedGames = []; // Array von {id, name, cover} Objekten
-
-        // Timer für Debounce der Suche
+        this.selectedGames = [];
         this.searchTimer = null;
-
     }
 
-    // --- Plattform wählen ---
-    // Wird aufgerufen wenn eine Plattform-Card geklickt wird.
-    // data-game-advisor-platform-param übergibt den Plattform-Namen.
     selectPlatform(event) {
         const button = event.currentTarget;
         this.selectedPlatform = button.dataset.gameAdvisorPlatformParam;
 
-        // Alle Plattform-Buttons: aktiven highlighten, Rest zurücksetzen
         this.platformTargets.forEach(btn => {
             if (btn === button) {
                 btn.classList.add('border-accent-500', 'bg-accent-50', 'text-accent-700');
@@ -63,19 +33,15 @@ export default class extends Controller {
             }
         });
 
-        // Spieleranzahl-Section einblenden (nächster Schritt)
         this.playerSectionTarget.classList.remove('hidden');
 
         this.updateSubmitButton();
     }
 
-    // --- Spieleranzahl wählen ---
-    // Wird aufgerufen wenn ein Spieleranzahl-Button geklickt wird.
     selectPlayerCount(event) {
         const button = event.currentTarget;
         this.selectedPlayerCount = parseInt(button.dataset.gameAdvisorCountParam);
 
-        // Alle Buttons: aktiven highlighten, Rest zurücksetzen
         this.playerCountTargets.forEach(btn => {
             if (btn === button) {
                 btn.classList.add('border-accent-500', 'bg-accent-50', 'text-accent-700');
@@ -86,14 +52,11 @@ export default class extends Controller {
             }
         });
 
-        // Game-Auswahl-Section einblenden (nächster Schritt)
         this.gameSectionTarget.classList.remove('hidden');
 
         this.updateSubmitButton();
     }
 
-    // --- Quick-Pick Game toggeln ---
-    // Klick auf eine Game-Card: hinzufügen oder entfernen.
     toggleGame(event) {
         const card = event.currentTarget;
         const id = parseInt(card.dataset.gameAdvisorIdParam);
@@ -102,11 +65,9 @@ export default class extends Controller {
 
         const index = this.selectedGames.findIndex(g => g.id === id);
 
-        // Overlay = der graue Schleier mit Häkchen über dem Cover
         const overlay = card.querySelector('[data-overlay]');
 
         if (index >= 0) {
-            // Game entfernen — Border + Hover zurücksetzen
             this.selectedGames.splice(index, 1);
             card.classList.remove('border-accent-500', 'hover:border-accent-600');
             card.classList.add('border-warm-200', 'hover:border-warm-400');
@@ -115,8 +76,6 @@ export default class extends Controller {
                 overlay.classList.remove('flex');
             }
         } else {
-            // Game hinzufügen — Border + Hover auf Accent umstellen,
-            // damit hover:border-warm-400 nicht die Accent-Border überschreibt
             this.selectedGames.push({ id, name, cover });
             card.classList.remove('border-warm-200', 'hover:border-warm-400');
             card.classList.add('border-accent-500', 'hover:border-accent-600');
@@ -130,10 +89,7 @@ export default class extends Controller {
         this.updateSubmitButton();
     }
 
-    // --- Autocomplete-Suche ---
-    // Wird bei jeder Eingabe aufgerufen. Debounce: 300ms warten
-    // nach dem letzten Tastendruck, dann erst den API-Call machen.
-    // So sparen wir unnötige Requests während der User tippt.
+    // 300ms debounce to avoid requests on every keystroke.
     search() {
         clearTimeout(this.searchTimer);
 
@@ -158,14 +114,12 @@ export default class extends Controller {
         }, 300);
     }
 
-    // --- Suchergebnis auswählen ---
     addSearchResult(event) {
         const item = event.currentTarget;
         const id = parseInt(item.dataset.gameAdvisorIdParam);
         const name = item.dataset.gameAdvisorNameParam;
         const cover = item.dataset.gameAdvisorCoverParam || '';
 
-        // Duplikat-Check
         if (this.selectedGames.some(g => g.id === id)) {
             this.searchResultsTarget.classList.add('hidden');
             this.searchInputTarget.value = '';
@@ -174,7 +128,6 @@ export default class extends Controller {
 
         this.selectedGames.push({ id, name, cover });
 
-        // Suchfeld + Dropdown zurücksetzen
         this.searchInputTarget.value = '';
         this.searchResultsTarget.classList.add('hidden');
 
@@ -182,12 +135,11 @@ export default class extends Controller {
         this.updateSubmitButton();
     }
 
-    // --- Ausgewähltes Game entfernen (Klick auf X in der Pill) ---
     removeGame(event) {
         const id = parseInt(event.currentTarget.dataset.gameAdvisorIdParam);
         this.selectedGames = this.selectedGames.filter(g => g.id !== id);
 
-        // Falls das Game auch in den Quick-Pick Cards war: Border + Overlay zurücksetzen
+        // Reset quick-pick card styling if this game had one.
         document.querySelectorAll(`[data-game-advisor-id-param="${id}"]`).forEach(card => {
             card.classList.remove('border-accent-500');
             card.classList.add('border-warm-200');
@@ -202,13 +154,10 @@ export default class extends Controller {
         this.updateSubmitButton();
     }
 
-    // --- KI-Empfehlung anfordern ---
-    // Schickt die ausgewählten Games + Plattform an den Server.
-    // Liest die SSE-Response Chunk für Chunk und zeigt den Text live an.
+    // Streams LLM response via SSE using ReadableStream (POST, not EventSource).
     async submit() {
         if (!this.selectedPlatform || !this.selectedPlayerCount || this.selectedGames.length === 0) return;
 
-        // UI vorbereiten: Ergebnis-Section zeigen, Text leeren, Laden starten
         this.resultSectionTarget.classList.remove('hidden');
         this.resultTextTarget.innerHTML = '';
         this.streamedText = '';
@@ -217,13 +166,9 @@ export default class extends Controller {
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.classList.add('opacity-50');
 
-        // Zum Ergebnis scrollen — smooth, damit der User den Übergang sieht.
         this.resultSectionTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         try {
-            // POST-Request mit Game-IDs und Plattform als JSON.
-            // fetch() mit ReadableStream statt EventSource,
-            // weil EventSource nur GET unterstützt und wir POST brauchen.
             const response = await fetch(this.recommendUrlValue, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -234,12 +179,8 @@ export default class extends Controller {
                 }),
             });
 
-            // Lade-Animation ausblenden sobald die erste Antwort kommt
             this.loadingTarget.classList.add('hidden');
 
-            // ReadableStream: Liest die Response Byte für Byte.
-            // Jeder Chunk kann mehrere SSE-Zeilen enthalten,
-            // oder eine Zeile kann über mehrere Chunks verteilt sein.
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -250,9 +191,8 @@ export default class extends Controller {
 
                 buffer += decoder.decode(value, { stream: true });
 
-                // SSE-Zeilen verarbeiten (getrennt durch \n\n)
                 const lines = buffer.split('\n');
-                buffer = lines.pop(); // Letztes Fragment behalten (könnte unvollständig sein)
+                buffer = lines.pop(); // Keep incomplete fragment
 
                 for (const line of lines) {
                     if (!line.startsWith('data: ')) continue;
@@ -276,7 +216,7 @@ export default class extends Controller {
                             return;
                         }
                     } catch {
-                        // Ungültiges JSON überspringen
+                        // Skip malformed JSON chunks.
                     }
                 }
             }
@@ -289,23 +229,15 @@ export default class extends Controller {
         this.resetSubmitButton();
     }
 
-    // --- Streaming-Text inkrementell als HTML rendern ---
-    // Baut DOM-Elemente Stück für Stück auf statt innerHTML komplett zu ersetzen.
-    // So werden bereits angezeigte Überschriften nicht neu erstellt.
-    //
-    // Logik: Text in Zeilen splitten. Alle Zeilen außer der letzten sind
-    // "abgeschlossen" (hatten ein \n). Nur neue abgeschlossene Zeilen
-    // werden als permanente DOM-Elemente angehängt. Die letzte (unvollständige)
-    // Zeile wird in ein temporäres Element geschrieben, das laufend aktualisiert wird.
+    // Incrementally appends completed lines as permanent DOM elements.
+    // The last (incomplete) line uses a temporary element that gets replaced.
     renderStreamedText() {
         const lines = this.streamedText.split('\n');
         const incompleteLine = lines.pop();
 
-        // Temporäres Streaming-Element entfernen (wird unten neu erstellt)
         const streaming = this.resultTextTarget.querySelector('[data-streaming]');
         if (streaming) streaming.remove();
 
-        // Neue abgeschlossene Zeilen als permanente Elemente anhängen
         while (this.renderedLineCount < lines.length) {
             const trimmed = lines[this.renderedLineCount].trim();
             this.renderedLineCount++;
@@ -313,7 +245,6 @@ export default class extends Controller {
             if (trimmed === '') continue;
 
             if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
-                // Markdown-Überschrift → Spieltitel mit Accent-Linie links
                 const title = this.escapeHtml(trimmed.replace(/^#{2,3}\s*/, ''));
                 const div = document.createElement('div');
                 div.className = 'mt-6 mb-2 border-l-4 border-accent-500 pl-4';
@@ -327,7 +258,6 @@ export default class extends Controller {
             }
         }
 
-        // Unvollständige Zeile als temporäres Element anzeigen
         const trimmedIncomplete = incompleteLine.trim();
         if (trimmedIncomplete) {
             const el = document.createElement('p');
@@ -338,26 +268,18 @@ export default class extends Controller {
         }
     }
 
-    // --- Inline-Markdown formatieren ---
-    // Erkennt *text* (Markdown-Italic) und ersetzt es durch dezent
-    // hervorgehobene Spans. Text wird vorher escaped (XSS-Schutz).
     formatInlineMarkdown(text) {
         const escaped = this.escapeHtml(text);
-        // *text* oder **text** → dezente Hervorhebung
         return escaped.replace(/\*{1,2}([^*]+)\*{1,2}/g,
             '<span class="font-medium text-warm-800">$1</span>');
     }
 
-    // --- Hilfsfunktionen ---
-
-    // Suchergebnisse als Dropdown rendern
     renderSearchResults(games) {
         if (games.length === 0) {
             this.searchResultsTarget.classList.add('hidden');
             return;
         }
 
-        // Jedes Ergebnis als klickbare Zeile mit Cover-Thumbnail und Name
         this.searchResultsTarget.innerHTML = games.map(game => `
             <button type="button"
                 class="cursor-pointer flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-warm-100 transition-colors"
@@ -379,16 +301,13 @@ export default class extends Controller {
         this.searchResultsTarget.classList.remove('hidden');
     }
 
-    // Ausgewählte Games als entfernbare Pills rendern
     renderSelectedGames() {
         if (this.selectedGames.length === 0) {
             this.selectedListTarget.innerHTML = '';
-            // Überschrift ausblenden wenn keine Games gewählt
             this.selectedHeadingTarget.classList.add('hidden');
             return;
         }
 
-        // Überschrift einblenden sobald mindestens 1 Game gewählt
         this.selectedHeadingTarget.classList.remove('hidden');
 
         this.selectedListTarget.innerHTML = this.selectedGames.map(game => `
@@ -404,7 +323,6 @@ export default class extends Controller {
         `).join('');
     }
 
-    // Submit-Button: aktiv wenn Plattform + mindestens 1 Game gewählt
     updateSubmitButton() {
         const enabled = this.selectedPlatform && this.selectedPlayerCount && this.selectedGames.length > 0;
         this.submitButtonTarget.disabled = !enabled;
@@ -416,9 +334,7 @@ export default class extends Controller {
         this.submitButtonTarget.classList.remove('opacity-50');
     }
 
-    // HTML-Zeichen escapen um XSS zu verhindern.
-    // Game-Namen kommen von einer externen API — wir dürfen sie
-    // nicht ungefiltert ins DOM schreiben.
+    // XSS protection — game names come from external API.
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;

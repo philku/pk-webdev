@@ -5,60 +5,35 @@ namespace App\Service;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-// Service für die Google Gemini API (Cloud LLM).
-// Ersetzt den OllamaService — statt eines lokalen Modells nutzen wir
-// Gemini 3.1 Flash Lite über Googles REST API.
-//
-// Authentifizierung: API-Key als Query-Parameter (kein OAuth nötig).
-// Streaming: ?alt=sse aktiviert Server-Sent Events — selbes Prinzip wie bei Ollama,
-// aber anderes Response-Format.
+// Google Gemini API service. Streams LLM responses as SSE via REST API.
+// Auth: API key as query parameter (no OAuth required).
 class GeminiService
 {
-    // Basis-URL der Gemini REST API.
-    // Der Modellname wird dynamisch eingefügt.
     private const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     public function __construct(
         private HttpClientInterface $httpClient,
-
-        // API-Key aus Google AI Studio (https://aistudio.google.com/apikey).
-        // Kein OAuth, kein Token-Refresh — einfach Key als Query-Parameter.
         #[Autowire(env: 'GEMINI_API_KEY')]
         private string $apiKey,
-
-        // Modellname, konfigurierbar über .env.
-        // Default: gemini-3.1-flash-lite-preview (schnell, günstig, gutes Deutsch).
         #[Autowire(env: 'GEMINI_MODEL')]
         private string $model,
     ) {
     }
 
-    // --- Streaming-Empfehlung ---
-    // Generator-Funktion: yielded Text-Chunks sobald sie von Gemini kommen.
-    // Gleiche Schnittstelle wie OllamaService — der Controller muss nicht
-    // wissen, welches LLM dahinter steckt.
-    //
-    // @param array $games Array von Game-Arrays (aus IgdbService::transformGame)
-    // @param string $platform Gewählte Plattform (z.B. "PS5")
-    // @return \Generator<string> Text-Chunks
+    // Generator that yields text chunks as they arrive from Gemini.
+    // Same interface as OllamaService — controller is LLM-agnostic.
     public function streamRecommendations(array $games, string $platform, int $playerCount = 2): \Generator
     {
         $prompt = $this->buildPrompt($games, $platform, $playerCount);
-
-        // Gemini REST API: POST mit ?alt=sse für Server-Sent Events.
-        // Der API-Key kommt als Query-Parameter — simpler als OAuth.
         $url = self::API_URL . $this->model . ':streamGenerateContent?alt=sse&key=' . $this->apiKey;
 
         $response = $this->httpClient->request('POST', $url, [
             'json' => [
-                // System-Prompt: getrennt von den User-Inhalten.
-                // Gemini nutzt ein eigenes Format (nicht "messages" wie OpenAI/Ollama).
                 'system_instruction' => [
                     'parts' => [
                         ['text' => $this->getSystemPrompt()],
                     ],
                 ],
-                // User-Nachricht: die eigentlichen Game-Daten + Plattform.
                 'contents' => [
                     [
                         'parts' => [
@@ -67,19 +42,11 @@ class GeminiService
                     ],
                 ],
             ],
-            // Timeout hoch setzen — LLM-Antworten dauern.
             'timeout' => 120,
         ]);
 
-        // Streaming: Den Response als Stream lesen.
-        // Gemini SSE schickt Events im Format:
-        //   data: {"candidates":[{"content":{"parts":[{"text":"Hallo"}]}}]}
-        //
-        // Jedes "data: " Präfix enthält ein JSON-Objekt.
-        // Der Text steckt in candidates[0].content.parts[0].text
         $stream = $response->toStream();
-
-        // Puffer für unvollständige Zeilen (TCP kann mitten in einer Zeile splitten)
+        // Buffer for incomplete lines (TCP can split mid-line).
         $buffer = '';
 
         while (!feof($stream)) {
@@ -91,29 +58,22 @@ class GeminiService
 
             $buffer .= $chunk;
 
-            // Puffer Zeile für Zeile verarbeiten
             while (($newlinePos = strpos($buffer, "\n")) !== false) {
                 $line = substr($buffer, 0, $newlinePos);
                 $buffer = substr($buffer, $newlinePos + 1);
 
                 $line = trim($line);
 
-                // SSE-Zeilen die mit "data: " beginnen enthalten die JSON-Daten.
-                // Andere Zeilen (leere Zeilen, "event:" etc.) überspringen.
                 if (!str_starts_with($line, 'data: ')) {
                     continue;
                 }
 
-                // "data: " Präfix entfernen → reines JSON
                 $json = substr($line, 6);
-
                 $data = json_decode($json, true);
                 if ($data === null) {
                     continue;
                 }
 
-                // Text aus der Gemini-Antwortstruktur extrahieren:
-                // candidates → erstes Element → content → parts → erstes Element → text
                 $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 if ($text !== '') {
                     yield $text;
@@ -122,9 +82,8 @@ class GeminiService
         }
     }
 
-    // --- System-Prompt: Definiert die Rolle und das Format ---
-    // Auf Englisch, weil LLMs englische Instruktionen besser verstehen
-    // und dann saubereres Deutsch produzieren.
+    // System prompt in English — LLMs follow English instructions more reliably
+    // while still producing clean German output.
     private function getSystemPrompt(): string
     {
         return <<<PROMPT
@@ -142,9 +101,7 @@ Rules:
 PROMPT;
     }
 
-    // --- User-Prompt: Enthält die konkreten Game-Daten ---
-    // Das LLM bekommt Name + Genres jedes Games, damit es Muster
-    // erkennen kann (z.B. "der User mag Shooter + Horror → Empfehle Left 4 Dead").
+    // Builds the user prompt with game names + genres so the LLM can detect taste patterns.
     private function buildPrompt(array $games, string $platform, int $playerCount): string
     {
         $gameList = [];

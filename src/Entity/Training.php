@@ -8,10 +8,8 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
-// Ein Training gehört zu einem Team und hat viele Anwesenheitseinträge.
-// Die Relation zu TrainingAttendance ist das Herzstück:
-// Statt einer simplen ManyToMany (Training↔Member) nutzen wir eine
-// Pivot-Entity, weil wir Extra-Daten (Status: anwesend/abwesend/entschuldigt) brauchen.
+// Uses a pivot entity (TrainingAttendance) instead of ManyToMany
+// to store per-member attendance status.
 #[ORM\Entity(repositoryClass: TrainingRepository::class)]
 class Training
 {
@@ -20,29 +18,21 @@ class Training
     #[ORM\Column]
     private ?int $id = null;
 
-    // Wann findet das Training statt? Datetime = Datum + Uhrzeit.
     #[ORM\Column(type: 'datetime')]
     #[Assert\NotNull(message: 'Bitte Datum und Uhrzeit angeben.')]
     private ?\DateTimeInterface $scheduledAt = null;
 
-    // Trainingsort — optional, weil nicht jedes Team einen festen Platz hat.
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $location = null;
 
-    // Kurze Beschreibung, z.B. "Taktiktraining" oder "Ausdauer".
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
 
-    // ManyToOne = "Viele Trainings gehören zu einem Team"
-    // inversedBy: 'trainings' verweist auf die neue Property in Team.
     #[ORM\ManyToOne(targetEntity: Team::class, inversedBy: 'trainings')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'Bitte ein Team auswählen.')]
     private ?Team $team = null;
 
-    // OneToMany zur Pivot-Entity TrainingAttendance.
-    // cascade persist: Wenn wir ein Training speichern, werden neue Attendances mitgespeichert.
-    // orphanRemoval: Wenn eine Attendance aus der Collection entfernt wird → DB-Löschung.
     /** @var Collection<int, TrainingAttendance> */
     #[ORM\OneToMany(targetEntity: TrainingAttendance::class, mappedBy: 'training', cascade: ['persist'], orphanRemoval: true)]
     private Collection $attendances;
@@ -51,8 +41,6 @@ class Training
     {
         $this->attendances = new ArrayCollection();
     }
-
-    // --- Getter & Setter ---
 
     public function getId(): ?int
     {

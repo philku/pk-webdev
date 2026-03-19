@@ -1,6 +1,5 @@
 import type { ConferenceFilter as FilterType } from '../types/standings'
 
-// Division-Zuordnung: Welche Divisions gehören zu welcher Conference?
 const DIVISIONS: Record<string, string[]> = {
     Eastern: ['Atlantic', 'Metropolitan'],
     Western: ['Central', 'Pacific'],
@@ -13,9 +12,7 @@ interface ConferenceFilterProps {
     onDivisionChange: (division: string) => void;
 }
 
-// Filter-Buttons für Conference und Division.
-// Erste Zeile: Alle / Eastern / Western
-// Zweite Zeile (nur wenn Conference gewählt): Divisions der gewählten Conference
+// Division buttons appear only when a conference is selected.
 export function ConferenceFilter({
     conference,
     division,
@@ -26,7 +23,7 @@ export function ConferenceFilter({
 
     return (
         <div className="space-y-2">
-            {/* Conference-Buttons */}
+            {/* Conference */}
             <div className="flex flex-wrap gap-2">
                 {conferences.map((c) => (
                     <button
@@ -46,7 +43,7 @@ export function ConferenceFilter({
                 ))}
             </div>
 
-            {/* Division-Buttons — nur sichtbar wenn eine Conference gewählt ist */}
+            {/* Divisions */}
             {conference !== 'all' && (
                 <div className="flex flex-wrap gap-2">
                     <button

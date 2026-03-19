@@ -19,17 +19,14 @@ class MemberType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            // TextType = normales Textfeld
             ->add('name', TextType::class, [
                 'label' => 'Name',
                 'attr' => ['placeholder' => 'Vor- und Nachname'],
             ])
-            // EmailType = Textfeld mit type="email" (Browser validiert auch)
             ->add('email', EmailType::class, [
                 'label' => 'E-Mail',
                 'attr' => ['placeholder' => 'name@beispiel.de'],
             ])
-            // TelType = Textfeld mit type="tel" (Mobile zeigt Ziffern-Tastatur)
             ->add('phone', TelType::class, [
                 'label' => 'Telefon',
                 'required' => false,
@@ -40,7 +37,6 @@ class MemberType extends AbstractType
                 'required' => false,
                 'attr' => ['placeholder' => 'z.B. Stürmer, Torwart'],
             ])
-            // ChoiceType = Dropdown mit festen Optionen
             ->add('role', ChoiceType::class, [
                 'label' => 'Rolle',
                 'choices' => [
@@ -51,28 +47,22 @@ class MemberType extends AbstractType
                 ],
                 'placeholder' => 'Rolle auswählen...',
             ])
-            // EntityType = Dropdown, das automatisch aus der DB befüllt wird!
-            // Symfony holt alle Teams und zeigt sie als Optionen an.
             ->add('team', EntityType::class, [
                 'label' => 'Team',
                 'class' => Team::class,
-                // choice_label = welches Feld des Team-Objekts als Text angezeigt wird
                 'choice_label' => 'name',
                 'placeholder' => 'Team auswählen...',
             ])
-            // DateType = Datumsauswahl
             ->add('joinedAt', DateType::class, [
                 'label' => 'Beitrittsdatum',
                 'required' => false,
-                'widget' => 'single_text', // Ein Feld statt 3 Dropdowns (Tag/Monat/Jahr)
+                'widget' => 'single_text',
             ])
         ;
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        // data_class verbindet das Formular mit der Entity.
-        // Beim Absenden werden die Werte automatisch in ein Member-Objekt geschrieben.
         $resolver->setDefaults([
             'data_class' => Member::class,
         ]);

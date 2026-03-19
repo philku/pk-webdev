@@ -14,15 +14,11 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/ki-game-berater')]
 class GameAdvisorController extends AbstractController
 {
-    // ---------- Hauptseite ----------
-    // Lädt die Vorauswahl-Games aus IGDB (gecacht) und rendert die Seite.
-    // Die ganze Interaktion (Plattform-Wahl, Game-Auswahl, KI-Empfehlung)
-    // passiert clientseitig im Stimulus Controller.
+    // Loads pre-selected games from IGDB (cached) for the landing page.
+    // All interaction (platform, game selection, AI recommendation) happens client-side via Stimulus.
     #[Route('', name: 'app_game_advisor')]
     public function index(IgdbService $igdb): Response
     {
-        // Vorauswahl-Games laden — beim ersten Aufruf 1 API-Call,
-        // danach 30 Tage aus dem Cache.
         try {
             $popularGames = $igdb->getPopularGames();
         } catch (\Exception) {
@@ -34,9 +30,7 @@ class GameAdvisorController extends AbstractController
         ]);
     }
 
-    // ---------- Game-Suche (Autocomplete) ----------
-    // JSON-Endpoint für das Suchfeld im Frontend.
-    // Minimum 2 Zeichen, sonst leeres Array (spart API-Calls).
+    // JSON endpoint for the search autocomplete. Min 2 chars to avoid wasteful API calls.
     #[Route('/api/search', name: 'app_game_advisor_search')]
     public function search(Request $request, IgdbService $igdb): JsonResponse
     {
@@ -55,17 +49,11 @@ class GameAdvisorController extends AbstractController
         return $this->json($results);
     }
 
-    // ---------- KI-Empfehlung (SSE Stream) ----------
-    // Liest die ausgewählten Game-IDs + Plattform aus dem Request,
-    // holt die Game-Details aus IGDB (gecacht), und streamt die
-    // Gemini-Antwort als Server-Sent Events zum Browser.
-    //
-    // SSE-Format: Jede Nachricht ist eine Zeile "data: {...}\n\n"
-    // Der Browser liest das mit fetch + ReadableStream.
+    // Streams Gemini's recommendation as Server-Sent Events.
+    // Fetches game details from IGDB, then pipes the LLM response chunk by chunk.
     #[Route('/api/recommend', name: 'app_game_advisor_recommend', methods: ['POST'])]
     public function recommend(Request $request, IgdbService $igdb, GeminiService $gemini): Response
     {
-        // JSON-Body lesen (Stimulus schickt Content-Type: application/json)
         $data = json_decode($request->getContent(), true);
         $gameIds = $data['gameIds'] ?? [];
         $platform = $data['platform'] ?? 'PC';
@@ -75,49 +63,32 @@ class GameAdvisorController extends AbstractController
             return $this->json(['error' => 'Keine Spiele ausgewählt'], 400);
         }
 
-        // Game-Details aus IGDB laden (jedes einzeln gecacht)
         $games = $igdb->getGamesById($gameIds);
 
         if (empty($games)) {
             return $this->json(['error' => 'Spiele konnten nicht geladen werden'], 500);
         }
 
-        // StreamedResponse: Symfony schickt die Response nicht auf einmal,
-        // sondern ruft die Callback-Funktion auf, die stückweise Daten schreibt.
-        // Solange der Callback läuft, bleibt die HTTP-Verbindung offen.
         return new StreamedResponse(function () use ($games, $platform, $playerCount, $gemini) {
-            // X-Accel-Buffering: no — KRITISCH für DDEV/nginx.
-            // Ohne diesen Header puffert nginx die gesamte Response
-            // und der Client sieht nichts bis Ollama komplett fertig ist.
-            // Das würde den ganzen Streaming-Effekt zunichtemachen.
+            // Disable nginx buffering — critical for SSE streaming in DDEV/nginx setups.
             header('X-Accel-Buffering: no');
 
             try {
-                // streamRecommendations() ist ein Generator:
-                // Jeder yield gibt einen Text-Chunk (ein paar Wörter) zurück.
                 foreach ($gemini->streamRecommendations($games, $platform, $playerCount) as $chunk) {
-                    // SSE-Format: "data: {json}\n\n"
-                    // Doppeltes \n ist der SSE-Standard — trennt Events voneinander.
                     echo 'data: ' . json_encode(['text' => $chunk]) . "\n\n";
 
-                    // ob_flush() + flush() erzwingen das sofortige Senden.
-                    // Ohne flush würde PHP die Daten in einem internen Puffer sammeln
-                    // und erst am Ende der Response alles auf einmal senden.
                     if (ob_get_level() > 0) {
                         ob_flush();
                     }
                     flush();
                 }
 
-                // Done-Event: signalisiert dem Client dass der Stream fertig ist.
                 echo 'data: ' . json_encode(['done' => true]) . "\n\n";
                 if (ob_get_level() > 0) {
                     ob_flush();
                 }
                 flush();
             } catch (\Exception $e) {
-                // Fehler als SSE-Event senden statt die Verbindung einfach abzubrechen.
-                // So kann der Client eine Fehlermeldung anzeigen.
                 echo 'data: ' . json_encode(['error' => 'Gemini API ist nicht erreichbar. Bitte versuche es später erneut.']) . "\n\n";
                 if (ob_get_level() > 0) {
                     ob_flush();
