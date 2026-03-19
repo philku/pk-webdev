@@ -8,6 +8,7 @@ use App\Entity\Training;
 use App\Entity\TrainingAttendance;
 use App\Form\MemberType;
 use App\Form\TrainingType;
+use App\Repository\MemberRepository;
 use App\Repository\TeamRepository;
 use App\Repository\TrainingAttendanceRepository;
 use App\Repository\TrainingRepository;
@@ -59,16 +60,25 @@ class ClubPlannerController extends AbstractController
     }
 
     // ---------- Mitglied löschen ----------
+    // Lösch-Limits: Mind. 7 Mitglieder insgesamt (damit Pagination sichtbar bleibt)
+    // und mind. 2 Mitglieder pro Team. Limits existieren zu Demo-Zwecken,
+    // damit der Vereinsplaner immer genug Daten zum Anzeigen hat.
     #[Route('/{id}/loeschen', name: 'app_club_planner_delete', methods: ['POST'])]
-    public function delete(Member $member, Request $request, EntityManagerInterface $em): Response
+    public function delete(Member $member, Request $request, EntityManagerInterface $em, MemberRepository $memberRepo): Response
     {
-        // CSRF-Token prüfen — Schutz gegen Cross-Site Request Forgery.
-        // Verhindert, dass jemand von einer fremden Seite aus einen Lösch-Request schickt.
         if ($this->isCsrfTokenValid('delete-' . $member->getId(), $request->request->get('_token'))) {
-            $em->remove($member);
-            $em->flush();
+            $totalMembers = $memberRepo->count([]);
+            $teamMemberCount = $memberRepo->count(['team' => $member->getTeam()]);
 
-            $this->addFlash('success', 'Mitglied wurde gelöscht.');
+            if ($totalMembers <= 7) {
+                $this->addFlash('error', 'Löschen nicht möglich — es müssen mindestens 7 Mitglieder existieren (Demo-Limit).');
+            } elseif ($teamMemberCount <= 2) {
+                $this->addFlash('error', 'Löschen nicht möglich — es müssen mindestens 2 Mitglieder pro Team existieren (Demo-Limit).');
+            } else {
+                $em->remove($member);
+                $em->flush();
+                $this->addFlash('success', 'Mitglied wurde gelöscht.');
+            }
         }
 
         return $this->redirectToRoute('app_club_planner');
@@ -167,15 +177,21 @@ class ClubPlannerController extends AbstractController
     }
 
     // ---------- Training löschen ----------
-    // POST-only + CSRF-Token — gleiches Pattern wie bei Member-Löschen.
+    // Lösch-Limit: Mind. 3 Trainings pro Team, damit die Trainingsquote
+    // sinnvolle Daten zeigen kann. Limit existiert zu Demo-Zwecken.
     #[Route('/trainings/{id}/loeschen', name: 'app_training_delete', methods: ['POST'])]
-    public function trainingDelete(Training $training, Request $request, EntityManagerInterface $em): Response
+    public function trainingDelete(Training $training, Request $request, EntityManagerInterface $em, TrainingRepository $trainingRepo): Response
     {
         if ($this->isCsrfTokenValid('delete-training-' . $training->getId(), $request->request->get('_token'))) {
-            $em->remove($training);
-            $em->flush();
+            $teamTrainingCount = count($trainingRepo->findByTeam($training->getTeam()));
 
-            $this->addFlash('success', 'Training wurde gelöscht.');
+            if ($teamTrainingCount <= 3) {
+                $this->addFlash('error', 'Löschen nicht möglich — es müssen mindestens 3 Trainings pro Team existieren (Demo-Limit).');
+            } else {
+                $em->remove($training);
+                $em->flush();
+                $this->addFlash('success', 'Training wurde gelöscht.');
+            }
         }
 
         return $this->redirectToRoute('app_trainings');

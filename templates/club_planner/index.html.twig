@@ -59,6 +59,11 @@
                 {{ message }}
             </div>
         {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ message }}
+            </div>
+        {% endfor %}
 
         <div class="flex flex-wrap gap-3">
             <a href="{{ path('app_club_planner_new') }}" class="inline-block rounded-lg bg-warm-900 px-5 py-2.5 text-sm font-medium text-warm-50 transition-colors hover:bg-accent-700">

@@ -106,31 +106,96 @@ class ClubPlannerControllerTest extends WebTestCase
 
     // Prüft: Löschen mit gültigem CSRF-Token entfernt das Mitglied
     // und leitet zurück zur Mitgliederliste.
+    // Es müssen genug Mitglieder existieren (mind. 8), damit das Lösch-Limit
+    // (mind. 7 gesamt + mind. 2 pro Team) nicht greift.
     public function testDeleteMemberWithValidCsrf(): void
     {
         $team = $this->createTeam();
-        $member = $this->createMember($team);
+        $team2 = $this->createTeam('A-Jugend', 'Fußball');
+        // 8 Mitglieder erstellen — nach dem Löschen eines bleiben 7 (= Minimum).
+        // "AAA" sortiert alphabetisch ganz nach vorne → erscheint auf Seite 1 der Pagination.
+        $member = $this->createMember($team, 'AAA Löschkandidat', 'delete@test.de');
+        for ($i = 1; $i <= 4; $i++) {
+            $this->createMember($team, "Spieler $i", "spieler$i@test.de");
+        }
+        for ($i = 5; $i <= 7; $i++) {
+            $this->createMember($team2, "Spieler $i", "spieler$i@test.de");
+        }
         $memberId = $member->getId();
 
-        // Mitgliederliste laden — die Live Component rendert für jedes Mitglied
-        // ein Lösch-Formular mit eingebettetem CSRF-Token.
-        // Wir extrahieren das Token aus dem HTML, genau wie ein echter Browser.
         $crawler = $this->client->request('GET', '/vereinsplaner');
         $deleteForm = $crawler->filter('form[action$="/' . $memberId . '/loeschen"]');
         $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
 
-        // POST-Request mit dem extrahierten CSRF-Token simulieren.
         $this->client->request('POST', '/vereinsplaner/' . $memberId . '/loeschen', [
             '_token' => $csrfToken,
         ]);
 
-        // Erwartung: Redirect (302) zurück zur Mitgliederliste.
         $this->assertResponseRedirects('/vereinsplaner');
 
-        // Prüfen: Mitglied ist wirklich aus der DB gelöscht.
         $this->em->clear();
         $deleted = $this->em->getRepository(Member::class)->find($memberId);
         $this->assertNull($deleted, 'Mitglied sollte nach dem Löschen nicht mehr in der DB sein');
+    }
+
+    // Prüft: Lösch-Limit greift — bei genau 7 Mitgliedern kann keins gelöscht werden.
+    public function testDeleteMemberBlockedByTotalLimit(): void
+    {
+        $team = $this->createTeam();
+        $team2 = $this->createTeam('A-Jugend', 'Fußball');
+        // "AAA" → erscheint auf Seite 1.
+        $member = $this->createMember($team, 'AAA Testmitglied', 'aaa@test.de');
+        for ($i = 1; $i <= 3; $i++) {
+            $this->createMember($team, "Spieler $i", "spieler$i@test.de");
+        }
+        for ($i = 4; $i <= 6; $i++) {
+            $this->createMember($team2, "Spieler $i", "spieler$i@test.de");
+        }
+        $memberId = $member->getId();
+
+        $crawler = $this->client->request('GET', '/vereinsplaner');
+        $deleteForm = $crawler->filter('form[action$="/' . $memberId . '/loeschen"]');
+        $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', '/vereinsplaner/' . $memberId . '/loeschen', [
+            '_token' => $csrfToken,
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner');
+
+        // Mitglied darf NICHT gelöscht sein — Limit greift.
+        $this->em->clear();
+        $stillExists = $this->em->getRepository(Member::class)->find($memberId);
+        $this->assertNotNull($stillExists, 'Mitglied darf nicht gelöscht werden wenn nur 7 existieren');
+    }
+
+    // Prüft: Lösch-Limit greift — Team mit nur 2 Mitgliedern kann keins verlieren.
+    public function testDeleteMemberBlockedByTeamLimit(): void
+    {
+        $team = $this->createTeam();
+        $team2 = $this->createTeam('A-Jugend', 'Fußball');
+        // "AAA" → erscheint auf Seite 1. Nur 2 im Team — Minimum.
+        $member = $this->createMember($team, 'AAA Testmitglied', 'aaa@test.de');
+        $this->createMember($team, 'BBB Teamkollege', 'bbb@test.de');
+        // Genug Mitglieder insgesamt (> 7), damit nur das Team-Limit greift.
+        for ($i = 1; $i <= 7; $i++) {
+            $this->createMember($team2, "Spieler $i", "spieler$i@test.de");
+        }
+        $memberId = $member->getId();
+
+        $crawler = $this->client->request('GET', '/vereinsplaner');
+        $deleteForm = $crawler->filter('form[action$="/' . $memberId . '/loeschen"]');
+        $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', '/vereinsplaner/' . $memberId . '/loeschen', [
+            '_token' => $csrfToken,
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner');
+
+        $this->em->clear();
+        $stillExists = $this->em->getRepository(Member::class)->find($memberId);
+        $this->assertNotNull($stillExists, 'Mitglied darf nicht gelöscht werden wenn Team nur 2 Mitglieder hat');
     }
 
     // Prüft: Löschen OHNE gültiges CSRF-Token löscht NICHT —
@@ -261,13 +326,18 @@ class ClubPlannerControllerTest extends WebTestCase
     }
 
     // Prüft: Training löschen mit gültigem CSRF-Token.
+    // Es müssen genug Trainings existieren (mind. 4), damit das Lösch-Limit
+    // (mind. 3 pro Team) nicht greift.
     public function testDeleteTrainingWithValidCsrf(): void
     {
         $team = $this->createTeam();
-        $training = $this->createTraining($team);
+        // 4 Trainings erstellen — nach dem Löschen eines bleiben 3 (= Minimum).
+        $this->createTraining($team, '2026-03-18 18:00');
+        $this->createTraining($team, '2026-03-19 18:00');
+        $this->createTraining($team, '2026-03-20 18:00');
+        $training = $this->createTraining($team, '2026-03-21 18:00');
         $trainingId = $training->getId();
 
-        // Trainingsliste laden um CSRF-Token zu extrahieren.
         $crawler = $this->client->request('GET', '/vereinsplaner/trainings');
         $deleteForm = $crawler->filter('form[action$="/' . $trainingId . '/loeschen"]');
         $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
@@ -281,6 +351,31 @@ class ClubPlannerControllerTest extends WebTestCase
         $this->em->clear();
         $deleted = $this->em->getRepository(Training::class)->find($trainingId);
         $this->assertNull($deleted, 'Training sollte nach dem Löschen nicht mehr in der DB sein');
+    }
+
+    // Prüft: Lösch-Limit greift — bei genau 3 Trainings kann keins gelöscht werden.
+    public function testDeleteTrainingBlockedByLimit(): void
+    {
+        $team = $this->createTeam();
+        $this->createTraining($team, '2026-03-18 18:00');
+        $this->createTraining($team, '2026-03-19 18:00');
+        $training = $this->createTraining($team, '2026-03-20 18:00');
+        $trainingId = $training->getId();
+
+        $crawler = $this->client->request('GET', '/vereinsplaner/trainings');
+        $deleteForm = $crawler->filter('form[action$="/' . $trainingId . '/loeschen"]');
+        $csrfToken = $deleteForm->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', '/vereinsplaner/trainings/' . $trainingId . '/loeschen', [
+            '_token' => $csrfToken,
+        ]);
+
+        $this->assertResponseRedirects('/vereinsplaner/trainings');
+
+        // Training darf NICHT gelöscht sein — Limit greift.
+        $this->em->clear();
+        $stillExists = $this->em->getRepository(Training::class)->find($trainingId);
+        $this->assertNotNull($stillExists, 'Training darf nicht gelöscht werden wenn Team nur 3 Trainings hat');
     }
 
     // Prüft: Training bearbeiten mit ungültiger ID gibt 404.
