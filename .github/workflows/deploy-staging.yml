@@ -1,0 +1,58 @@
+# Automatisches Deployment auf Staging nach erfolgreichem CI.
+# Trigger: Push auf main — aber nur wenn die CI-Pipeline grün ist.
+
+name: Deploy Staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    # Nur deployen wenn CI erfolgreich war UND es ein Push war (kein PR)
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+
+    steps:
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # Alle Deploy-Schritte auf dem Server ausführen.
+          # set -e = bei Fehler sofort abbrechen (nicht weitermachen).
+          script: |
+            set -e
+            cd /home/philku-staging/htdocs/staging.philku.de
+
+            echo "=== Git Pull ==="
+            git pull origin main
+
+            echo "=== Composer Install ==="
+            COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-progress --no-interaction
+
+            echo "=== Tailwind Build ==="
+            php8.4 bin/console tailwind:build --minify
+
+            echo "=== NHL React Build ==="
+            cd nhl-standings && npm ci && npm run build && cd ..
+
+            echo "=== Database Migrations ==="
+            php8.4 bin/console doctrine:migrations:migrate --no-interaction
+
+            echo "=== Asset Map Compile ==="
+            php8.4 bin/console asset-map:compile
+
+            echo "=== Cache Clear ==="
+            php8.4 bin/console cache:clear
+
+            echo "=== Staging Deploy Complete ==="
