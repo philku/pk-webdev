@@ -81,7 +81,7 @@
                             Lebenslauf
                             <span class="transition-transform group-hover/btn:translate-y-0.5">↓</span>
                         </a>
-                        <a href="{{ path('app_demos') }}" class="group/btn inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-5 py-2.5 text-[14px] font-medium text-white/60 transition-all hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/80">
+                        <a href="{{ path('app_demos') }}" class="group/btn inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-5 py-2.5 text-[14px] font-semibold text-white/60 transition-all hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/80">
                             Tech Demos
                             <span class="transition-transform group-hover/btn:translate-x-0.5">→</span>
                         </a>
@@ -95,29 +95,73 @@
                 <span class="terminal-cursor h-[18px] w-[8px] bg-white/40"></span>
             </div>
         </div>
+
+        {# Terminal status bar #}
+        <div class="relative flex items-center justify-between border-t border-white/[0.06] px-5 py-1.5 font-mono text-[11px] text-white/20">
+            <span>HTTP/1.1 200 OK</span>
+            <span>Content-Type: developer/fullstack · Cache: warm</span>
+        </div>
     </section>
 
-    {# Skills overview #}
+    {# Tech stack #}
     <section class="py-20">
         <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
             Technologien
         </p>
         <h2 class="mt-3 font-heading text-3xl text-warm-900">Tech Stack</h2>
 
-        <div class="mt-10 grid gap-px overflow-hidden rounded-xl border border-warm-200 bg-warm-200 sm:grid-cols-2 lg:grid-cols-3">
-            {% set skills = [
-                { name: 'Symfony', description: 'PHP-Framework für robuste Webanwendungen' },
-                { name: 'Doctrine ORM', description: 'Datenbank-Abstraction mit Entities & Migrations' },
-                { name: 'Twig', description: 'Template Engine für sauberes HTML' },
-                { name: 'Tailwind CSS', description: 'Utility-first CSS für modernes Design' },
-                { name: 'Turbo', description: 'SPA-Feeling ohne JavaScript-Framework' },
-                { name: 'Live Components', description: 'Reaktive UI-Komponenten serverseitig' },
-            ] %}
+        {% set categories = [
+            { label: 'Backend', items: [
+                { name: 'PHP', logo: 'php' },
+                { name: 'Symfony', logo: 'symfony' },
+                { name: 'Pimcore', logo: 'pimcore-icon' },
+                { name: 'Twig', color: '#BACF29' },
+            ] },
+            { label: 'Frontend', items: [
+                { name: 'HTML', logo: 'html5' },
+                { name: 'JavaScript', logo: 'javascript' },
+                { name: 'Tailwind CSS', logo: 'tailwindcss' },
+                { name: 'Stimulus', logo: 'stimulus' },
+                { name: 'Turbo', logo: 'turbo' },
+                { name: 'React', logo: 'react', inProgress: true },
+                { name: 'TypeScript', logo: 'typescript', inProgress: true },
+            ] },
+            { label: 'Datenbanken', items: [
+                { name: 'MySQL', logo: 'mysql' },
+                { name: 'MariaDB', logo: 'mariadb' },
+                { name: 'Redis', logo: 'redis' },
+            ] },
+            { label: 'DevOps & Tools', items: [
+                { name: 'Git', logo: 'git' },
+                { name: 'GitHub', logo: 'github' },
+                { name: 'GitHub Actions', logo: 'githubactions' },
+                { name: 'Docker', logo: 'docker' },
+                { name: 'DDEV', logo: 'ddev' },
+            ] },
+        ] %}
 
-            {% for skill in skills %}
-                <div class="bg-warm-50 p-6 transition-colors hover:bg-white">
-                    <h3 class="font-medium text-warm-900">{{ skill.name }}</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-warm-500">{{ skill.description }}</p>
+        <div class="mt-10 space-y-6">
+            {% for category in categories %}
+                <div>
+                    <h3 class="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-warm-400">{{ category.label }}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for item in category.items %}
+                            <div class="flex items-center gap-2 rounded-lg border {{ item.inProgress is defined and item.inProgress ? 'border-dashed border-warm-300 bg-warm-50' : 'border-warm-200 bg-white' }} px-3 py-1.5">
+                                {% if item.logo is defined %}
+                                    <img src="{{ asset('images/logos/' ~ item.logo ~ '.svg') }}"
+                                         alt="{{ item.name }}"
+                                         class="h-4 w-4 {{ item.inProgress is defined and item.inProgress ? 'opacity-60' : '' }}"
+                                         loading="lazy">
+                                {% else %}
+                                    <span class="flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold text-white" style="background-color: {{ item.color }}">{{ item.name[:1] }}</span>
+                                {% endif %}
+                                <span class="text-sm {{ item.inProgress is defined and item.inProgress ? 'text-warm-400' : 'text-warm-700' }}">{{ item.name }}</span>
+                                {% if item.inProgress is defined and item.inProgress %}
+                                    <span class="text-[10px] italic text-warm-400">in progress</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             {% endfor %}
         </div>
