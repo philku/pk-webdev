@@ -16,9 +16,7 @@ class PageControllerTest extends WebTestCase
     {
         // Statische Seiten
         yield 'Startseite' => ['/', 200];
-        yield 'Über mich' => ['/ueber-mich', 200];
         yield 'Tech Demos' => ['/tech-demos', 200];
-        yield 'Kontakt' => ['/kontakt', 200];
 
         // Vereinsplaner — Listen und Formulare (brauchen keine ID)
         yield 'Vereinsplaner' => ['/vereinsplaner', 200];

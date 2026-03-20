@@ -3,25 +3,66 @@
 {% block title %}Home{% endblock %}
 
 {% block body %}
-    {# Hero Section — großzügig, editorial #}
-    <section class="py-24 sm:py-32">
-        <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
-            Fullstack Entwickler
-        </p>
-        <h1 class="mt-4 font-heading text-5xl leading-tight text-warm-900 sm:text-6xl">
-            Philipp Küchau
-        </h1>
-        <p class="mt-6 max-w-lg text-lg leading-relaxed text-warm-500">
-            Ich baue moderne Webanwendungen mit Symfony, Tailwind CSS und Turbo.
-            Hier zeige ich, was ich kann.
-        </p>
-        <div class="mt-10 flex flex-wrap gap-4">
-            <a href="{{ path('app_demos') }}" class="rounded-lg bg-warm-900 px-6 py-3 text-sm font-medium text-warm-50 transition-all hover:bg-accent-700">
-                Tech Demos
-            </a>
-            <a href="{{ path('app_contact') }}" class="rounded-lg border border-warm-300 px-6 py-3 text-sm font-medium text-warm-700 transition-all hover:border-warm-400 hover:bg-warm-100">
-                Kontakt
-            </a>
+    {# Hero — entire section is one dark terminal window #}
+    <section class="overflow-hidden rounded-2xl bg-warm-900 shadow-2xl ring-1 ring-white/10">
+
+        {# Terminal title bar #}
+        <div class="flex items-center gap-1.5 border-b border-white/5 px-5 py-3">
+            <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
+            <span class="h-3 w-3 rounded-full bg-amber-400/80"></span>
+            <span class="h-3 w-3 rounded-full bg-green-500/80"></span>
+            <span class="ml-4 font-mono text-xs text-warm-500">~/pk-webdev</span>
+        </div>
+
+        {# Terminal body #}
+        <div class="px-5 py-6 sm:px-8 sm:py-8 lg:px-10 font-mono text-sm leading-relaxed">
+
+            {# === Command 1: about — photo + key info === #}
+            <p>
+                <span class="text-accent-400">❯</span>
+                <span class="text-warm-300"> cat README.md</span>
+            </p>
+            <div class="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-center lg:gap-10">
+                <div class="shrink-0">
+                    <img
+                        src="{{ asset('images/0A9B5163_final.jpg') }}"
+                        alt="Philipp Küchau — Fullstack Entwickler"
+                        width="3543"
+                        height="2362"
+                        fetchpriority="high"
+                        decoding="async"
+                        sizes="(min-width: 1024px) 240px, (min-width: 640px) 208px, 192px"
+                        class="h-48 w-48 rounded-full object-cover object-[50%_25%] ring-2 ring-white/10 sm:h-52 sm:w-52 lg:h-60 lg:w-60"
+                    >
+                </div>
+                <div class="sm:pt-1">
+                    <p class="text-warm-200 font-heading text-2xl sm:text-3xl">Philipp Küchau</p>
+                    <p class="mt-2 text-accent-400">Fullstack Entwickler · Berlin</p>
+                    <div class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
+                        <span class="text-warm-500">Kundenprojekt</span><a href="https://tunero.de" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 transition-colors">tunero.de</a>
+                        <span class="text-warm-500">Background</span><span class="text-warm-300">Mathematik · IT-Projektmanagement</span>
+                        <span class="text-warm-500">GitHub</span><a href="https://github.com/philku" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 transition-colors">github.com/philku</a>
+                        <span class="text-warm-500">E-Mail</span><a href="mailto:p.kuechau@gmx.de" class="text-accent-400 hover:text-accent-300 transition-colors">p.kuechau@gmx.de</a>
+                        <span class="text-warm-500">Status</span><span class="text-green-400">verfügbar</span>
+                    </div>
+
+                    {# === CTA buttons === #}
+                    <div class="mt-6 flex flex-wrap gap-3">
+                <a href="#" class="rounded-lg bg-accent-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-500">
+                    Lebenslauf ↓
+                </a>
+                    <a href="{{ path('app_demos') }}" class="rounded-lg border border-warm-600 px-5 py-2.5 text-sm font-medium text-warm-300 transition-all hover:border-warm-400 hover:text-warm-100">
+                        Tech Demos →
+                    </a>
+                    </div>
+                </div>
+            </div>
+
+            {# === Prompt === #}
+            <p class="mt-6">
+                <span class="text-accent-400">❯</span>
+                <span class="text-warm-400/60 animate-pulse">▊</span>
+            </p>
         </div>
     </section>
 

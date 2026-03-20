@@ -25,12 +25,11 @@
                     PK
                 </a>
 
-                {# Desktop Navigation #}
+                {# Desktop Navigation — active route gets text-warm-900 #}
+                {% set current_route = app.request.attributes.get('_route') %}
                 <ul class="hidden items-center gap-8 md:flex">
-                    <li><a href="{{ path('app_home') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Home</a></li>
-                    <li><a href="{{ path('app_about') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Über mich</a></li>
-                    <li><a href="{{ path('app_demos') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Tech Demos</a></li>
-                    <li><a href="{{ path('app_contact') }}" class="nav-link text-sm text-warm-500 transition-colors hover:text-warm-900">Kontakt</a></li>
+                    <li><a href="{{ path('app_home') }}" class="nav-link text-sm transition-colors hover:text-warm-900 {{ current_route == 'app_home' ? 'text-warm-900' : 'text-warm-500' }}">Home</a></li>
+                    <li><a href="{{ path('app_demos') }}" class="nav-link text-sm transition-colors hover:text-warm-900 {{ current_route starts with 'app_demos' or current_route starts with 'app_club' or current_route starts with 'app_metallica' or current_route starts with 'app_game' or current_route starts with 'app_nhl' or current_route starts with 'app_training' ? 'text-warm-900' : 'text-warm-500' }}">Tech Demos</a></li>
                 </ul>
 
                 {# Mobile Hamburger Button — 3 Spans die sich zum X animieren.
@@ -55,10 +54,8 @@
                left-0 right-0: volle Breite. bg-warm-50 + shadow: saubere Abgrenzung zum Content. #}
             <div class="hidden absolute left-0 right-0 border-t border-warm-200 bg-warm-50 shadow-lg md:hidden" data-mobile-menu-target="menu">
                 <ul class="space-y-1 px-6 py-4">
-                    <li><a href="{{ path('app_home') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Home</a></li>
-                    <li><a href="{{ path('app_about') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Über mich</a></li>
-                    <li><a href="{{ path('app_demos') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Tech Demos</a></li>
-                    <li><a href="{{ path('app_contact') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm text-warm-500 hover:bg-warm-100 hover:text-warm-900">Kontakt</a></li>
+                    <li><a href="{{ path('app_home') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm hover:bg-warm-100 hover:text-warm-900 {{ current_route == 'app_home' ? 'text-warm-900 font-medium' : 'text-warm-500' }}">Home</a></li>
+                    <li><a href="{{ path('app_demos') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm hover:bg-warm-100 hover:text-warm-900 {{ current_route starts with 'app_demos' or current_route starts with 'app_club' or current_route starts with 'app_metallica' or current_route starts with 'app_game' or current_route starts with 'app_nhl' or current_route starts with 'app_training' ? 'text-warm-900 font-medium' : 'text-warm-500' }}">Tech Demos</a></li>
                 </ul>
             </div>
         </header>
