@@ -3,9 +3,7 @@
 {% block title %}Find my next Co-op{% endblock %}
 
 {% block body %}
-    {# Stimulus Controller: steuert den gesamten Flow.
-       Die URL-Values übergeben die API-Endpoints an den Controller,
-       damit er sie für fetch()-Calls nutzen kann. #}
+    {# Stimulus controller — URL values pass API endpoints for fetch() calls #}
     <div data-controller="game-advisor"
          data-game-advisor-search-url-value="{{ path('app_game_advisor_search') }}"
          data-game-advisor-recommend-url-value="{{ path('app_game_advisor_recommend') }}">
@@ -21,7 +19,7 @@
                 euer nächstes Coop-Abenteuer finden.
             </p>
 
-            {# ===== Unter der Haube ===== #}
+            {# ===== Under the Hood ===== #}
             {% embed 'components/_unter_der_haube.html.twig' %}
                 {% block items %}
                     <div class="border-l-2 border-accent-500/30 pl-4">
@@ -60,7 +58,7 @@
             {% endembed %}
         </section>
 
-        {# ===== SECTION 1: Plattform-Wahl ===== #}
+        {# ===== SECTION 1: Platform selection ===== #}
         <section class="py-8 border-t border-warm-200">
             <h2 class="font-heading text-2xl text-warm-900">1. Plattform wählen</h2>
             <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -76,7 +74,7 @@
             </div>
         </section>
 
-        {# ===== SECTION 2: Spieleranzahl (hidden bis Plattform gewählt) ===== #}
+        {# ===== SECTION 2: Player count (hidden until platform selected) ===== #}
         <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="playerSection">
             <h2 class="font-heading text-2xl text-warm-900">2. Wie viele Spieler?</h2>
             <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -92,30 +90,30 @@
             </div>
         </section>
 
-        {# ===== SECTION 3: Game-Auswahl (hidden bis Spieleranzahl gewählt) ===== #}
+        {# ===== SECTION 3: Game selection (hidden until player count selected) ===== #}
         <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="gameSection">
             <h2 class="font-heading text-2xl text-warm-900">3. Welche Games magst du?</h2>
             <p class="mt-2 text-sm text-warm-400">Suche nach deinen Lieblingsspielen oder wähle aus den Vorschlägen.</p>
 
-            {# --- Suchfeld mit Autocomplete --- #}
+            {# --- Search field with autocomplete --- #}
             <div class="relative mt-6 max-w-md">
                 <input type="search"
                     placeholder="Game suchen..."
                     class="w-full rounded-lg border border-warm-300 bg-white py-2.5 pl-10 pr-4 text-sm text-warm-900 placeholder-warm-400 transition-colors focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
                     data-game-advisor-target="searchInput"
                     data-action="input->game-advisor#search">
-                {# Lupe-Icon #}
+                {# Search icon #}
                 <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-warm-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 </svg>
 
-                {# Dropdown für Suchergebnisse — absolut positioniert unter dem Input #}
+                {# Search results dropdown — absolutely positioned below input #}
                 <div class="hidden absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-xl border border-warm-200 bg-white shadow-lg"
                      data-game-advisor-target="searchResults">
                 </div>
             </div>
 
-            {# --- Quick-Pick: Populäre Games nach Genre --- #}
+            {# --- Quick-pick: popular games by genre --- #}
             {% for genre, games in popularGames %}
                 <div class="mt-8">
                     <h3 class="text-sm font-medium uppercase tracking-widest text-warm-400">{{ genre }}</h3>
@@ -127,7 +125,7 @@
                                 data-game-advisor-id-param="{{ game.id }}"
                                 data-game-advisor-name-param="{{ game.name }}"
                                 data-game-advisor-cover-param="{{ game.cover ?? '' }}">
-                                {# Cover mit Overlay-Container: relative für absolute Positionierung des Häkchens #}
+                                {# Cover with overlay container for checkmark positioning #}
                                 <div class="relative mx-auto h-40 w-28">
                                     {% if game.cover %}
                                         <img src="{{ game.cover }}" alt="{{ game.name }}"
@@ -135,8 +133,7 @@
                                     {% else %}
                                         <div class="h-40 w-28 rounded-lg bg-warm-200"></div>
                                     {% endif %}
-                                    {# Overlay: grauer Schleier + Häkchen, initial hidden.
-                                       Der Stimulus Controller toggled 'hidden' per Klasse 'selected-overlay'. #}
+                                    {# Overlay: dim + checkmark, initially hidden. Toggled by Stimulus controller. #}
                                     <div class="absolute inset-0 hidden items-center justify-center rounded-lg bg-warm-900/40" data-overlay>
                                         <svg class="h-12 w-12 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -151,14 +148,14 @@
             {% endfor %}
         </section>
 
-        {# ===== SECTION 4: Ausgewählte Games (Pills) ===== #}
-        {# Überschrift wird per JS eingeblendet sobald mindestens 1 Game gewählt ist #}
+        {# ===== SECTION 4: Selected games (pills) ===== #}
+        {# Heading shown via JS once at least 1 game is selected #}
         <h3 class="hidden pt-6 text-sm font-medium uppercase tracking-widest text-warm-400"
             data-game-advisor-target="selectedHeading">Ausgewählte Spiele</h3>
         <div class="flex flex-wrap gap-2 py-4" data-game-advisor-target="selectedList">
         </div>
 
-        {# ===== SECTION 5: Submit-Button ===== #}
+        {# ===== SECTION 5: Submit button ===== #}
         <section class="py-8 border-t border-warm-200">
             <button type="button"
                 class="cursor-pointer rounded-lg bg-warm-900 px-6 py-3 text-sm font-medium text-warm-50 transition-all hover:bg-accent-700 disabled:cursor-not-allowed opacity-50"
@@ -169,11 +166,11 @@
             </button>
         </section>
 
-        {# ===== SECTION 6: KI-Ergebnis (hidden bis Submit) ===== #}
+        {# ===== SECTION 6: AI result (hidden until submit) ===== #}
         <section class="hidden py-8 border-t border-warm-200" data-game-advisor-target="resultSection">
             <h2 class="font-heading text-2xl text-warm-900">Empfehlungen</h2>
 
-            {# Lade-Animation: drehendes Icon #}
+            {# Loading spinner #}
             <div class="mt-4 flex items-center gap-3 text-warm-400" data-game-advisor-target="loading">
                 <svg class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -182,8 +179,7 @@
                 <span class="text-sm">KI denkt nach...</span>
             </div>
 
-            {# Hier streamt der Text rein — DOM-Elemente werden inkrementell
-               aufgebaut (Überschriften + Absätze), kein whitespace-pre-wrap nötig. #}
+            {# Streamed text — DOM elements built incrementally (headings + paragraphs) #}
             <div class="mt-4 max-w-2xl text-warm-700 leading-relaxed"
                  data-game-advisor-target="resultText">
             </div>

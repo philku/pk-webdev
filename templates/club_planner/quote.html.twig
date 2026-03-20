@@ -24,8 +24,7 @@
             {# ========== MOBILE: Card-Layout (unter lg) ========== #}
             <div class="space-y-4 lg:hidden">
                 {% for stat in stats %}
-                    {# Prozentberechnung in Twig — DQL kann kein sauberes Rounding.
-                       presentCount kommt als String aus DQL, |number_format rundet. #}
+                    {# Percentage calc in Twig — DQL can't round cleanly #}
                     {% set percent = stat.totalTrainings > 0 ? (stat.presentCount / stat.totalTrainings * 100) : 0 %}
 
                     <div class="rounded-xl border border-warm-200 p-5">
@@ -42,7 +41,7 @@
                         <p class="mt-1 text-sm text-warm-400">
                             {{ stat.presentCount }}/{{ stat.totalTrainings }} Trainings
                         </p>
-                        {# Fortschrittsbalken — Breite = Prozent, Farbe nach Quote #}
+                        {# Progress bar — width = percent, color by attendance rate #}
                         <div class="mt-3 h-2 w-full rounded-full bg-warm-100">
                             <div
                                 class="h-2 rounded-full transition-all
@@ -77,7 +76,7 @@
                                     <td class="px-6 py-4 text-warm-500">{{ stat.totalTrainings }}</td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
-                                            {# Fortschrittsbalken #}
+                                            {# Progress bar #}
                                             <div class="h-2 flex-1 rounded-full bg-warm-100">
                                                 <div
                                                     class="h-2 rounded-full transition-all
@@ -87,7 +86,7 @@
                                                     style="width: {{ percent }}%"
                                                 ></div>
                                             </div>
-                                            {# Prozentzahl rechts daneben #}
+                                            {# Percentage value #}
                                             <span class="w-12 text-right text-sm font-medium
                                                 {% if percent >= 80 %}text-green-600
                                                 {% elseif percent >= 50 %}text-amber-600

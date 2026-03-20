@@ -9,16 +9,13 @@
         </p>
         <h1 class="mt-3 font-heading text-4xl text-warm-900">{{ title }}</h1>
 
-        {# Beim Bearbeiten zeigen wir das Team als Info-Text an (nicht änderbar) #}
+        {# Show team name as read-only info when editing #}
         {% if training is defined %}
             <p class="mt-2 text-sm text-warm-500">Team: {{ training.team.name }}</p>
         {% endif %}
 
         <div class="mt-10 max-w-xl">
-            {# Klassisches Symfony-Form — kein Live Component.
-               Statt form_row() (das Symfony-Default-Styling nutzt) rendern wir
-               Label, Widget und Errors einzeln mit eigenen Tailwind-Klassen.
-               Gleiches Pattern wie bei MemberForm. #}
+            {# Classic Symfony form — renders label, widget, errors separately with Tailwind classes #}
             {{ form_start(form, { attr: { class: 'space-y-6' } }) }}
 
                 {% for field in form %}

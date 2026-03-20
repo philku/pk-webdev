@@ -5,8 +5,8 @@
 
 /* ==============================
    SELF-HOSTED FONTS
-   Keine Google Fonts CDN — DSGVO-konform.
-   woff2-Dateien liegen in /public/fonts/
+   No Google Fonts CDN — GDPR compliant.
+   woff2 files served from /public/fonts/
    ============================== */
 @font-face {
     font-family: "Sora";
@@ -34,17 +34,15 @@
 
 /* ==============================
    CUSTOM THEME
-   Tailwind v4: Theme-Anpassungen direkt in CSS via @theme
-   Hier definieren wir eigene Farben, Fonts und Design-Tokens,
-   die wir dann überall als Tailwind-Klassen nutzen können
-   (z.B. text-warm-900, font-heading, bg-accent-500)
+   Tailwind v4: custom theme tokens via @theme
+   (e.g. text-warm-900, font-heading, bg-accent-500)
    ============================== */
 @theme {
-    /* Typografie: Serif für Headlines, Sans für Body */
+    /* Typography: Sora for headings, DM Sans for body */
     --font-heading: "Sora", sans-serif;
     --font-body: "DM Sans", sans-serif;
 
-    /* Warme Neutraltöne statt kaltem Grau — gibt der Seite Charakter */
+    /* Warm neutrals instead of cold grays */
     --color-warm-50: #FAF9F7;
     --color-warm-100: #F0EEEB;
     --color-warm-200: #E2DFDA;
@@ -56,7 +54,7 @@
     --color-warm-800: #252320;
     --color-warm-900: #171614;
 
-    /* Akzentfarbe: Teal — edel, nicht zu grell */
+    /* Accent color: teal */
     --color-accent-400: #2DD4BF;
     --color-accent-500: #14B8A6;
     --color-accent-600: #0D9488;
@@ -75,7 +73,7 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
 }
 
-/* Markierter Text bekommt unsere Akzentfarbe */
+/* Text selection uses accent color */
 ::selection {
     background-color: var(--color-accent-400);
     color: var(--color-warm-900);
@@ -83,7 +81,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ==============================
    NAV-LINK ANIMATION
-   Sanftes Unterstreichen von links nach rechts bei Hover
+   Smooth left-to-right underline on hover
    ============================== */
 .nav-link {
     position: relative;
@@ -105,21 +103,41 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==============================
+   TERMINAL HERO
+   ============================== */
+.terminal-scanlines {
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.03) 2px,
+        rgba(255, 255, 255, 0.03) 4px
+    );
+}
+
+.terminal-cursor {
+    animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* ==============================
    DIALOG / MODAL
-   Tailwind v4 resettet das <dialog>-Element,
-   daher müssen wir die Zentrierung selbst setzen.
+   Tailwind v4 resets <dialog>, so we set centering manually.
    ============================== */
 dialog[open] {
     margin: auto;
 }
 
 dialog::backdrop {
-    /* Wird von Tailwind-Klassen im Template gestylt,
-       aber als Fallback setzen wir hier einen Hintergrund */
+    /* Styled via Tailwind in template; fallback background here */
     background-color: rgba(23, 22, 20, 0.4);
 }
 
-/* Sanfte Ein-/Ausblendung */
+/* Smooth fade in/out */
 dialog[open] {
     animation: dialog-in 0.2s ease-out;
 }
@@ -137,12 +155,10 @@ dialog[open] {
 
 /* ==============================
    LEAFLET POPUP — WARM THEME
-   Leaflet's Standard-Popups sehen generisch aus.
-   Hier überschreiben wir die Styles damit sie zum
-   Warm-Theme der Seite passen.
+   Override Leaflet's default popups to match the warm theme.
    ============================== */
 
-/* Popup-Container: abgerundete Ecken, warmer Hintergrund, weicher Schatten */
+/* Popup container: rounded corners, warm background, soft shadow */
 .metallica-popup .leaflet-popup-content-wrapper {
     background: var(--color-warm-50);
     color: var(--color-warm-900);
@@ -158,7 +174,7 @@ dialog[open] {
     line-height: 1.5;
 }
 
-/* Pfeil unter dem Popup passend einfärben */
+/* Match popup arrow to theme colors */
 .metallica-popup .leaflet-popup-tip {
     background: var(--color-warm-50);
     border: 1px solid var(--color-warm-200);
@@ -166,7 +182,7 @@ dialog[open] {
     border-left: none;
 }
 
-/* Schließen-Button dezenter */
+/* Subtle close button */
 .metallica-popup .leaflet-popup-close-button {
     color: var(--color-warm-400);
     font-size: 20px;
@@ -183,7 +199,7 @@ dialog[open] {
     color: var(--color-warm-900);
 }
 
-/* --- Popup-Inhalte --- */
+/* --- Popup content --- */
 .metallica-popup-content {
     padding: 16px 18px;
     display: flex;
@@ -233,14 +249,14 @@ dialog[open] {
     color: var(--color-accent-700);
 }
 
-/* Anzahl Konzerte am Ort */
+/* Concert count at venue */
 .metallica-popup-count {
     font-size: 12px;
     color: var(--color-warm-400);
     padding-bottom: 4px;
 }
 
-/* Scrollbare Liste bei mehreren Konzerten am gleichen Ort */
+/* Scrollable list for multiple concerts at same venue */
 .metallica-popup-list {
     max-height: 180px;
     overflow-y: auto;
@@ -249,7 +265,7 @@ dialog[open] {
     padding-top: 4px;
 }
 
-/* Einzelner Listeneintrag — klickbar, mit Hover-Effekt */
+/* Single list item — clickable, with hover effect */
 .metallica-popup-item {
     display: flex;
     align-items: baseline;

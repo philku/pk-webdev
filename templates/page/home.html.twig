@@ -3,27 +3,43 @@
 {% block title %}Home{% endblock %}
 
 {% block body %}
-    {# Hero — entire section is one dark terminal window #}
-    <section class="overflow-hidden rounded-2xl bg-warm-900 shadow-2xl ring-1 ring-white/10">
+    {# Hero — terminal window with subtle CRT atmosphere #}
+    <section class="terminal-hero group/terminal relative overflow-hidden rounded-2xl shadow-2xl shadow-warm-900/50 ring-1 ring-white/[0.08]">
+
+        {# Layered background: base + radial glow + scanlines #}
+        <div class="absolute inset-0 bg-[#131216]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(13,148,136,0.06),transparent_60%)]"></div>
+        <div class="terminal-scanlines absolute inset-0 pointer-events-none opacity-[0.03]" aria-hidden="true"></div>
 
         {# Terminal title bar #}
-        <div class="flex items-center gap-1.5 border-b border-white/5 px-5 py-3">
-            <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
-            <span class="h-3 w-3 rounded-full bg-amber-400/80"></span>
-            <span class="h-3 w-3 rounded-full bg-green-500/80"></span>
-            <span class="ml-4 font-mono text-xs text-warm-500">~/pk-webdev</span>
+        <div class="relative flex items-center border-b border-white/[0.06] px-5 py-3">
+            <div class="flex items-center gap-2">
+                <span class="h-[11px] w-[11px] rounded-full bg-[#ff5f57]"></span>
+                <span class="h-[11px] w-[11px] rounded-full bg-[#febc2e]"></span>
+                <span class="h-[11px] w-[11px] rounded-full bg-[#28c840]"></span>
+            </div>
+            <span class="ml-4 font-mono text-[11px] tracking-wide text-white/25">~/pk-webdev</span>
         </div>
 
         {# Terminal body #}
-        <div class="px-5 py-6 sm:px-8 sm:py-8 lg:px-10 font-mono text-sm leading-relaxed">
+        <div class="relative px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12 font-mono text-sm leading-relaxed">
 
-            {# === Command 1: about — photo + key info === #}
-            <p>
-                <span class="text-accent-400">❯</span>
-                <span class="text-warm-300"> cat README.md</span>
+            {# === Command === #}
+            <p class="flex items-center gap-2">
+                <span class="text-accent-400 text-xs">❯</span>
+                <span class="text-white/50">cat</span>
+                <span class="text-white/70">README.md</span>
             </p>
-            <div class="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-center lg:gap-10">
-                <div class="shrink-0">
+
+            {# === Separator line (like markdown hr) === #}
+            <div class="mt-5 mb-6 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.1] to-transparent"></div>
+
+            {# === Output: photo + info === #}
+            <div class="flex flex-col items-center gap-8 sm:flex-row sm:items-center lg:gap-12">
+
+                {# Photo with accent glow #}
+                <div class="relative shrink-0">
+                    <div class="absolute -inset-1 rounded-full bg-accent-600/10 blur-xl"></div>
                     <img
                         src="{{ asset('images/0A9B5163_final.jpg') }}"
                         alt="Philipp Küchau — Fullstack Entwickler"
@@ -32,44 +48,56 @@
                         fetchpriority="high"
                         decoding="async"
                         sizes="(min-width: 1024px) 240px, (min-width: 640px) 208px, 192px"
-                        class="h-48 w-48 rounded-full object-cover object-[50%_25%] ring-2 ring-white/10 sm:h-52 sm:w-52 lg:h-60 lg:w-60"
+                        class="relative h-44 w-44 rounded-full object-cover object-[50%_25%] ring-[1.5px] ring-white/[0.12] sm:h-52 sm:w-52 lg:h-60 lg:w-60"
                     >
                 </div>
-                <div class="sm:pt-1">
-                    <p class="text-warm-200 font-heading text-2xl sm:text-3xl">Philipp Küchau</p>
-                    <p class="mt-2 text-accent-400">Fullstack Entwickler · Berlin</p>
-                    <div class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
-                        <span class="text-warm-500">Kundenprojekt</span><a href="https://tunero.de" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 transition-colors">tunero.de</a>
-                        <span class="text-warm-500">Background</span><span class="text-warm-300">Mathematik · IT-Projektmanagement</span>
-                        <span class="text-warm-500">GitHub</span><a href="https://github.com/philku" target="_blank" rel="noopener" class="text-accent-400 hover:text-accent-300 transition-colors">github.com/philku</a>
-                        <span class="text-warm-500">E-Mail</span><a href="mailto:p.kuechau@gmx.de" class="text-accent-400 hover:text-accent-300 transition-colors">p.kuechau@gmx.de</a>
-                        <span class="text-warm-500">Status</span><span class="text-green-400">verfügbar</span>
+
+                {# Info block #}
+                <div>
+                    <h1 class="font-heading text-[1.65rem] font-semibold tracking-tight text-white/90 sm:text-3xl lg:text-[2rem]">
+                        Philipp Küchau
+                    </h1>
+                    <p class="mt-1.5 text-[14px] font-medium tracking-wide text-accent-400/90">
+                        Fullstack Entwickler · Berlin
+                    </p>
+
+                    {# Key-value grid #}
+                    <div class="mt-5 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1 text-[14px]">
+                        <span class="text-white/30">Kundenprojekt</span>
+                        <a href="https://tunero.de" target="_blank" rel="noopener" class="text-accent-400/80 transition-colors hover:text-accent-300">tunero.de</a>
+                        <span class="text-white/30">Background</span>
+                        <span class="text-white/60">Mathematik · IT-Projektmanagement</span>
+                        <span class="text-white/30">GitHub</span>
+                        <a href="https://github.com/philku" target="_blank" rel="noopener" class="text-accent-400/80 transition-colors hover:text-accent-300">github.com/philku</a>
+                        <span class="text-white/30">E-Mail</span>
+                        <a href="mailto:p.kuechau@gmx.de" class="text-accent-400/80 transition-colors hover:text-accent-300">p.kuechau@gmx.de</a>
+                        <span class="text-white/30">Status</span>
+                        <span class="font-medium text-emerald-400">verfügbar</span>
                     </div>
 
-                    {# === CTA buttons === #}
-                    <div class="mt-6 flex flex-wrap gap-3">
-                <a href="#" class="rounded-lg bg-accent-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-500">
-                    Lebenslauf ↓
-                </a>
-                    <a href="{{ path('app_demos') }}" class="rounded-lg border border-warm-600 px-5 py-2.5 text-sm font-medium text-warm-300 transition-all hover:border-warm-400 hover:text-warm-100">
-                        Tech Demos →
-                    </a>
+                    {# CTA buttons #}
+                    <div class="mt-7 flex flex-wrap gap-3">
+                        <a href="#" class="group/btn inline-flex items-center gap-2 rounded-lg bg-accent-600/90 px-5 py-2.5 text-[14px] font-semibold text-white shadow-md shadow-accent-600/10 transition-all hover:bg-accent-500/80">
+                            Lebenslauf
+                            <span class="transition-transform group-hover/btn:translate-y-0.5">↓</span>
+                        </a>
+                        <a href="{{ path('app_demos') }}" class="group/btn inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-5 py-2.5 text-[14px] font-medium text-white/60 transition-all hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/80">
+                            Tech Demos
+                            <span class="transition-transform group-hover/btn:translate-x-0.5">→</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
             {# === Prompt === #}
-            <p class="mt-6">
-                <span class="text-accent-400">❯</span>
-                <span class="text-warm-400/60 animate-pulse">▊</span>
-            </p>
+            <div class="mt-8 flex items-center gap-2">
+                <span class="text-accent-400 text-xs">❯</span>
+                <span class="terminal-cursor h-[18px] w-[8px] bg-white/40"></span>
+            </div>
         </div>
     </section>
 
-    {# Trennlinie #}
-    <hr class="border-warm-200">
-
-    {# Skills Übersicht #}
+    {# Skills overview #}
     <section class="py-20">
         <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
             Technologien

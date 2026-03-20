@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}Philipp Kuchau{% endblock %} | Webentwicklung</title>
 
-        {# Fonts: Sora (Headlines) + DM Sans (Body) — self-hosted, DSGVO-konform #}
+        {# Fonts: Sora (Headlines) + DM Sans (Body) — self-hosted, GDPR-compliant #}
 
         {% block stylesheets %}
             <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
@@ -20,7 +20,7 @@
         {# ========== NAVIGATION ========== #}
         <header class="sticky top-0 z-50 border-b border-warm-200 bg-warm-50/80 backdrop-blur-md" data-controller="mobile-menu">
             <nav class="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-                {# Logo / Name — Serif-Font für Wiedererkennungswert #}
+                {# Logo / Name — serif font for brand recognition #}
                 <a href="{{ path('app_home') }}" class="font-heading text-xl text-warm-900 transition-colors hover:text-accent-600">
                     PK
                 </a>
@@ -32,12 +32,7 @@
                     <li><a href="{{ path('app_demos') }}" class="nav-link text-sm transition-colors hover:text-warm-900 {{ current_route starts with 'app_demos' or current_route starts with 'app_club' or current_route starts with 'app_metallica' or current_route starts with 'app_game' or current_route starts with 'app_nhl' or current_route starts with 'app_training' ? 'text-warm-900' : 'text-warm-500' }}">Tech Demos</a></li>
                 </ul>
 
-                {# Mobile Hamburger Button — 3 Spans die sich zum X animieren.
-                   Jeder Span ist ein Strich. Beim Öffnen:
-                   - Oben: dreht sich 45° und rutscht zur Mitte
-                   - Mitte: wird unsichtbar (opacity 0)
-                   - Unten: dreht sich -45° und rutscht zur Mitte
-                   Der Controller toggled die Klasse 'open' auf dem Button. #}
+                {# Mobile hamburger — 3 spans animate into an X via 'open' class #}
                 <button
                     type="button"
                     class="group relative h-5 w-5 rounded-md text-warm-500 transition-colors hover:text-warm-900 md:hidden"
@@ -50,8 +45,7 @@
                 </button>
             </nav>
 
-            {# Mobile Navigation — absolute damit es über dem Content schwebt statt ihn runterzuschieben.
-               left-0 right-0: volle Breite. bg-warm-50 + shadow: saubere Abgrenzung zum Content. #}
+            {# Mobile nav — absolute overlay, full width #}
             <div class="hidden absolute left-0 right-0 border-t border-warm-200 bg-warm-50 shadow-lg md:hidden" data-mobile-menu-target="menu">
                 <ul class="space-y-1 px-6 py-4">
                     <li><a href="{{ path('app_home') }}" data-action="click->mobile-menu#close" class="block rounded-md px-3 py-2 text-sm hover:bg-warm-100 hover:text-warm-900 {{ current_route == 'app_home' ? 'text-warm-900 font-medium' : 'text-warm-500' }}">Home</a></li>
@@ -60,7 +54,7 @@
             </div>
         </header>
 
-        {# ========== HAUPTINHALT ========== #}
+        {# ========== MAIN CONTENT ========== #}
         <main class="mx-auto max-w-4xl px-6 py-20">
             {% block body %}{% endblock %}
         </main>

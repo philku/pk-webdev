@@ -10,10 +10,7 @@
         <h1 class="mt-3 font-heading text-4xl text-warm-900">{{ title }}</h1>
 
         <div class="mt-10 max-w-xl">
-            {# Hier wird die Live Component eingebunden. #}
-            {# "MemberForm" = der Name der PHP-Klasse (ohne Namespace). #}
-            {# initialFormData = das Member-Objekt (leer bei "neu", befüllt bei "bearbeiten"). #}
-            {# form = das vorbereitete FormView-Objekt vom Controller. #}
+            {# MemberForm Live Component — initialFormData is empty for new, populated for edit #}
             {{ component('MemberForm', {
                 initialFormData: member,
                 form: form

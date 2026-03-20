@@ -8,9 +8,9 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class GameAdvisorControllerTest extends WebTestCase
 {
-    // ==================== GAME-SUCHE ====================
+    // ==================== GAME SEARCH ====================
 
-    // Prüft: Suche mit gültigem Query gibt JSON-Ergebnisse zurück.
+    // Search with valid query returns JSON results.
     public function testSearchReturnsResults(): void
     {
         $client = static::createClient();
@@ -20,8 +20,6 @@ class GameAdvisorControllerTest extends WebTestCase
             ->willReturn([
                 ['id' => 1, 'name' => 'It Takes Two', 'cover' => 'https://example.com/cover.jpg'],
             ]);
-        // getPopularGames() wird nicht aufgerufen, muss aber gemockt sein
-        // falls der Service im Container registriert wird.
         $igdbMock->method('getPopularGames')->willReturn([]);
 
         $client->getContainer()->set(IgdbService::class, $igdbMock);
@@ -34,8 +32,7 @@ class GameAdvisorControllerTest extends WebTestCase
         $this->assertSame('It Takes Two', $data[0]['name']);
     }
 
-    // Prüft: Suche mit zu kurzem Query (< 2 Zeichen) gibt leeres Array zurück.
-    // Kein API-Call nötig — der Controller fängt das vorher ab.
+    // Search with short query (< 2 chars) returns empty array — no API call needed.
     public function testSearchWithShortQueryReturnsEmpty(): void
     {
         $client = static::createClient();
@@ -46,9 +43,9 @@ class GameAdvisorControllerTest extends WebTestCase
         $this->assertSame([], $data);
     }
 
-    // ==================== KI-EMPFEHLUNG ====================
+    // ==================== AI RECOMMENDATION ====================
 
-    // Prüft: Empfehlung ohne Spiele gibt 400 zurück.
+    // Recommend without games returns 400.
     public function testRecommendWithoutGamesReturns400(): void
     {
         $client = static::createClient();
@@ -60,7 +57,7 @@ class GameAdvisorControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(400);
     }
 
-    // Prüft: Empfehlung mit Spielen gibt SSE-Stream zurück.
+    // Recommend with games returns SSE stream.
     public function testRecommendReturnsStream(): void
     {
         $client = static::createClient();
@@ -72,13 +69,12 @@ class GameAdvisorControllerTest extends WebTestCase
             ]);
         $igdbMock->method('getPopularGames')->willReturn([]);
 
-        // GeminiService::streamRecommendations() ist ein Generator.
-        // Wir mocken ihn so, dass er zwei Chunks yieldet.
+        // GeminiService::streamRecommendations() is a generator — mock yields two chunks.
         $geminiMock = $this->createMock(GeminiService::class);
         $geminiMock->method('streamRecommendations')
             ->willReturnCallback(function () {
-                yield 'Hier ist';
-                yield ' meine Empfehlung';
+                yield 'Here is';
+                yield ' my recommendation';
             });
 
         $client->getContainer()->set(IgdbService::class, $igdbMock);
@@ -89,7 +85,6 @@ class GameAdvisorControllerTest extends WebTestCase
         ], json_encode(['gameIds' => [1], 'platform' => 'PC', 'playerCount' => 2]));
 
         $this->assertResponseIsSuccessful();
-        // Content-Type enthält ggf. charset-Suffix, daher assertStringContainsString.
         $this->assertStringContainsString(
             'text/event-stream',
             $client->getResponse()->headers->get('content-type'),

@@ -12,7 +12,7 @@
             Mitgliederverwaltung mit CRUD, Live-Suche, Echtzeit-Validierung und Trainingsplaner.
         </p>
 
-        {# ===== Unter der Haube ===== #}
+        {# ===== Under the Hood ===== #}
         {% embed 'components/_unter_der_haube.html.twig' %}
             {% block items %}
                 <div class="border-l-2 border-accent-500/30 pl-4">
@@ -74,9 +74,7 @@
             </a>
         </div>
 
-        {# Die gesamte Mitgliederliste (Suchfeld + Tabelle/Cards) #}
-        {# wird jetzt von der Live Component gerendert. #}
-        {# Bei jeder Eingabe im Suchfeld wird nur dieser Bereich neu geladen. #}
+        {# Member list rendered by Live Component — re-renders on every search input #}
         <div class="mt-8">
             {{ component('MemberSearch') }}
         </div>

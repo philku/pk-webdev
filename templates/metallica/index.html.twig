@@ -2,12 +2,7 @@
 
 {% block title %}Metallica Universe{% endblock %}
 
-{#
-    Kein {% block stylesheets %} und {% block javascripts %} mehr nötig!
-    Leaflet wird jetzt per ImportMap geladen (siehe importmap.php).
-    Der Stimulus Controller (metallica_map_controller.js) importiert
-    Leaflet JS + CSS automatisch als Modul-Abhängigkeit.
-#}
+{# Leaflet loaded via ImportMap — Stimulus controller imports JS + CSS as module dependency #}
 
 {% block body %}
     <section class="py-12">
@@ -20,7 +15,7 @@
             Daten von setlist.fm und Spotify APIs.
         </p>
 
-        {# ===== Unter der Haube ===== #}
+        {# ===== Under the Hood ===== #}
         {% embed 'components/_unter_der_haube.html.twig' %}
             {% block items %}
                 <div class="border-l-2 border-accent-500/30 pl-4">
@@ -58,24 +53,12 @@
         {% endembed %}
     </section>
 
-    {# --- Stimulus Controller aktivieren ---
-         data-controller="metallica-map" verbindet dieses <div> mit dem
-         metallica_map_controller.js. Stimulus erkennt den Namen automatisch:
-         Dateiname metallica_map_controller.js → Controller-Name metallica-map
-
-         data-metallica-map-url-value übergibt die API-URL an den Controller.
-         Im Controller ist das dann this.urlValue (ein String).
-         Vorteil: Die URL wird von Twig's path() generiert — kein Hardcoding.
-    #}
+    {# Stimulus controller — URL value passed via Twig's path() #}
     <div class="py-8 border-t border-warm-200"
          data-controller="metallica-map"
          data-metallica-map-url-value="{{ path('app_metallica_concerts') }}">
 
-        {# --- Statistik-Kacheln ---
-             Jedes data-metallica-map-target="..." verbindet das Element
-             mit einem Target im Controller. Der Controller greift dann
-             per this.statTotalTarget etc. darauf zu.
-        #}
+        {# Stat tiles — each target accessed via this.<name>Target in controller #}
         <section class="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div class="rounded-xl border border-warm-200 p-5 text-center">
                 <p class="text-2xl font-heading text-warm-900" data-metallica-map-target="statTotal">—</p>
@@ -95,9 +78,9 @@
             </div>
         </section>
 
-        {# --- Karte --- #}
+        {# --- Map --- #}
         <section class="mt-8">
-            {# Loading-Indikator — wird vom Controller ausgeblendet sobald Daten da sind #}
+            {# Loading indicator — hidden by controller once data arrives #}
             <div data-metallica-map-target="loading"
                  class="flex items-center justify-center rounded-xl border border-warm-200 bg-warm-50 py-20">
                 <div class="text-center">
@@ -106,17 +89,12 @@
                 </div>
             </div>
 
-            {# Die eigentliche Karte — anfangs versteckt, Controller blendet sie ein #}
-            {# relative z-0 erzeugt einen eigenen Stacking-Context.
-               Ohne das durchbrechen Leaflets interne z-indices (400+)
-               den sticky Header (z-50) und die Karte liegt über der Navigation. #}
+            {# Map container — hidden initially, shown by controller.
+               relative z-0 creates a stacking context so Leaflet's z-indices (400+) don't overlap the sticky header (z-50). #}
             <div data-metallica-map-target="mapContainer"
                  class="relative z-0 hidden h-[500px] rounded-xl border border-warm-200 sm:h-[600px]"></div>
 
-            {# Progress Bar — zeigt den Fortschritt beim seitenweisen Laden.
-                 Erscheint unterhalb der Karte sobald Seite 1 da ist,
-                 verschwindet wenn alle Seiten geladen sind.
-                 Drei Targets: Wrapper (progress), Balken (progressBar), Text (progressText) #}
+            {# Progress bar — shows page-by-page loading progress, hidden when done #}
             <div data-metallica-map-target="progress"
                  class="hidden mt-4">
                 <div class="flex items-center gap-3">
@@ -131,11 +109,11 @@
             </div>
         </section>
 
-        {# --- Konzertliste unter der Karte --- #}
+        {# --- Concert list below the map --- #}
         <section class="mt-8">
             <h2 class="font-heading text-2xl text-warm-900">Letzte Konzerte</h2>
             <div data-metallica-map-target="concertList" class="mt-4 space-y-3">
-                {# Wird vom Controller befuellt #}
+                {# Populated by controller #}
             </div>
         </section>
 
@@ -164,7 +142,7 @@
         </div>
     </div>
 
-    {# ========== MEISTGESPIELTE SONGS ========== #}
+    {# ========== MOST PLAYED SONGS ========== #}
     <section class="mt-10 pb-12"
              data-controller="metallica-discography"
              data-metallica-discography-url-value="{{ path('app_metallica_discography_stats') }}">

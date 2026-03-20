@@ -8,27 +8,19 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class MetallicaControllerTest extends WebTestCase
 {
-    // ==================== KONZERTE API ====================
+    // ==================== CONCERTS API ====================
 
-    // Prüft: /api/concerts gibt JSON zurück wenn der Full-Cache existiert.
-    // Mock: checkForNewConcerts() gibt gecachte Konzertdaten zurück.
+    // /api/concerts returns JSON when full cache exists.
     public function testConcertsApiReturnsJsonFromCache(): void
     {
         $client = static::createClient();
 
-        // Mock für SetlistFmService erstellen.
-        // createMock() erzeugt ein Fake-Objekt das wie der echte Service aussieht,
-        // aber keine echten API-Calls macht.
         $setlistFmMock = $this->createMock(SetlistFmService::class);
-
-        // Wenn checkForNewConcerts() aufgerufen wird, soll es Fake-Daten zurückgeben
-        // statt die setlist.fm API aufzurufen.
         $setlistFmMock->method('checkForNewConcerts')
             ->willReturn([
                 ['venue' => 'Olympiastadion', 'city' => 'Berlin', 'date' => '2024-06-14'],
             ]);
 
-        // Mock im Symfony-Container registrieren — überschreibt den echten Service.
         $client->getContainer()->set(SetlistFmService::class, $setlistFmMock);
 
         $client->request('GET', '/metallica/api/concerts');
@@ -39,7 +31,7 @@ class MetallicaControllerTest extends WebTestCase
         $this->assertCount(1, $data['concerts']);
     }
 
-    // Prüft: /api/concerts mit ?page=1 gibt paginierte Daten zurück (Cold Start).
+    // /api/concerts?page=1 returns paginated data (cold start).
     public function testConcertsApiPaginatedRequest(): void
     {
         $client = static::createClient();
@@ -65,7 +57,7 @@ class MetallicaControllerTest extends WebTestCase
 
     // ==================== SETLIST DETAIL ====================
 
-    // Prüft: Setlist-Detailseite rendert korrekt mit gemockten Daten.
+    // Setlist detail page renders correctly with mocked data.
     public function testSetlistPageLoads(): void
     {
         $client = static::createClient();
@@ -86,7 +78,7 @@ class MetallicaControllerTest extends WebTestCase
         $this->assertResponseIsSuccessful();
     }
 
-    // Prüft: Setlist mit unbekannter ID gibt 404.
+    // Unknown setlist ID returns 404.
     public function testSetlistNotFoundReturns404(): void
     {
         $client = static::createClient();
@@ -103,15 +95,12 @@ class MetallicaControllerTest extends WebTestCase
 
     // ==================== ALBUM DETAIL ====================
 
-    // Prüft: Album-Detailseite rendert korrekt mit gemockten Spotify-Daten.
+    // Album detail page renders correctly with mocked Spotify data.
     public function testAlbumPageLoads(): void
     {
         $client = static::createClient();
 
         $spotifyMock = $this->createMock(SpotifyService::class);
-        // Mock-Daten müssen der Struktur entsprechen, die SpotifyService::getAlbum()
-        // zurückgibt — nicht der rohen Spotify-API. Der Service transformiert die Daten
-        // zu einem flachen Array mit 'image', 'spotify_url', 'tracks' etc.
         $spotifyMock->method('getAlbum')
             ->willReturn([
                 'name' => 'Master of Puppets',
@@ -133,7 +122,7 @@ class MetallicaControllerTest extends WebTestCase
         $this->assertResponseIsSuccessful();
     }
 
-    // Prüft: Album-Seite gibt 404 wenn Spotify den Fehler wirft.
+    // Album page returns 404 when Spotify throws error.
     public function testAlbumNotFoundReturns404(): void
     {
         $client = static::createClient();
@@ -151,14 +140,12 @@ class MetallicaControllerTest extends WebTestCase
 
     // ==================== SONG STATS ====================
 
-    // Prüft: /api/discography/stats gibt Top-10-Songs als JSON zurück.
+    // /api/discography/stats returns top 10 songs as JSON.
     public function testDiscographyStatsReturnsJson(): void
     {
         $client = static::createClient();
 
         $setlistFmMock = $this->createMock(SetlistFmService::class);
-
-        // getSongPlayCounts() liefert ein assoziatives Array: 'Songname' => Anzahl
         $setlistFmMock->method('getSongPlayCounts')
             ->willReturn([
                 'Enter Sandman' => 1200,

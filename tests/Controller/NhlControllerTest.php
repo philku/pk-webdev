@@ -8,7 +8,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class NhlControllerTest extends WebTestCase
 {
-    // Prüft: Die NHL-Standings-Seite (Twig-Template) lädt ohne API-Call.
+    // Standings page (Twig template) loads without API call.
     public function testStandingsPageLoads(): void
     {
         $client = static::createClient();
@@ -17,24 +17,16 @@ class NhlControllerTest extends WebTestCase
         $this->assertResponseIsSuccessful();
     }
 
-    // Prüft: Der Standings-Proxy gibt die API-Daten als JSON zurück.
-    //
-    // MockHttpClient ersetzt den echten HttpClient im Symfony-Container.
-    // Statt einen Request an api-web.nhle.com zu schicken, gibt er
-    // eine vordefinierte JSON-Antwort zurück. So testen wir unseren
-    // Controller-Code ohne echten API-Call.
+    // Standings proxy returns API data as JSON via MockHttpClient.
     public function testStandingsProxyReturnsJson(): void
     {
         $client = static::createClient();
 
-        // Fake-Antwort definieren — minimale Struktur wie die echte NHL API.
         $mockResponse = new MockResponse(
             json_encode(['standings' => [['teamAbbrev' => ['default' => 'BOS']]]]),
             ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']],
         );
 
-        // MockHttpClient im Container registrieren.
-        // Das überschreibt den echten HttpClient nur für diesen Test.
         $client->getContainer()->set('http_client', new MockHttpClient($mockResponse));
 
         $client->request('GET', '/api/nhl/standings');
@@ -42,13 +34,12 @@ class NhlControllerTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertResponseHeaderSame('content-type', 'application/json');
 
-        // Prüfen: Die Fake-Daten kommen korrekt durch.
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('standings', $data);
         $this->assertSame('BOS', $data['standings'][0]['teamAbbrev']['default']);
     }
 
-    // Prüft: Der Roster-Proxy gibt Team-Daten als JSON zurück.
+    // Roster proxy returns team data as JSON.
     public function testRosterProxyReturnsJson(): void
     {
         $client = static::createClient();

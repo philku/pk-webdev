@@ -23,10 +23,7 @@
     </section>
 
     <section class="py-8">
-        {# Manuelles HTML-Formular statt Symfony CollectionType.
-           Jedes Select hat name="status[{memberId}]" — im Controller
-           kommt das als Array an: $request->request->all('status').
-           Einfacher und transparenter als CollectionType. #}
+        {# Manual HTML form — each select name="status[{memberId}]" arrives as array in controller #}
         <form method="post" action="{{ path('app_training_attendance', { id: training.id }) }}">
 
             {# ========== MOBILE: Card-Layout (unter lg) ========== #}
