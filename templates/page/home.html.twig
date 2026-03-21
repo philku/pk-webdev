@@ -4,7 +4,8 @@
 
 {% block body %}
     {# Hero — terminal window with subtle CRT atmosphere #}
-    <section class="terminal-hero group/terminal relative overflow-hidden rounded-2xl shadow-2xl shadow-warm-900/50 ring-1 ring-white/[0.08]">
+    <section class="terminal-hero group/terminal relative overflow-hidden rounded-2xl shadow-2xl shadow-warm-900/50 ring-1 ring-white/[0.08]"
+             data-controller="terminal">
 
         {# Layered background: base + radial glow + scanlines #}
         <div class="absolute inset-0 bg-[#131216]"></div>
@@ -89,22 +90,25 @@
                 </div>
             </div>
 
-            {# === Prompt === #}
-            <div class="mt-8 flex items-center gap-2">
-                <span class="text-accent-400 text-xs">❯</span>
-                <span class="terminal-cursor h-[18px] w-[8px] bg-white/40"></span>
+            {# === Interactive output area === #}
+            <div data-terminal-target="output"></div>
+
+            {# === Prompt with interactive input === #}
+            <div class="mt-8 flex items-center min-h-[24px]" data-terminal-target="prompt">
+                <span class="text-accent-400 text-xs leading-none mr-2">❯</span>
+                <span class="text-white/70 whitespace-pre" data-terminal-target="input"></span><span class="terminal-cursor h-[18px] w-[8px] bg-white/40" data-terminal-target="cursor"></span>
             </div>
         </div>
 
         {# Terminal status bar #}
-        <div class="relative flex items-center justify-between border-t border-white/[0.06] px-5 py-1.5 font-mono text-[11px] text-white/20">
+        <div class="relative flex flex-wrap items-center justify-between gap-x-4 border-t border-white/[0.06] px-5 py-1.5 font-mono text-[11px] text-white/20">
             <span>HTTP/1.1 200 OK</span>
             <span>Content-Type: developer/fullstack · Cache: warm</span>
         </div>
     </section>
 
     {# Tech stack #}
-    <section class="py-20">
+    <section class="py-20" id="tech-stack">
         <p class="text-sm font-medium uppercase tracking-widest text-accent-600">
             Technologien
         </p>
