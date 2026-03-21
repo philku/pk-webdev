@@ -20,4 +20,15 @@ class PageController extends AbstractController
         return $this->render('page/demos.html.twig');
     }
 
+    #[Route('/datenschutz', name: 'app_datenschutz')]
+    public function datenschutz(): Response
+    {
+        return $this->render('page/datenschutz.html.twig');
+    }
+
+    #[Route('/impressum', name: 'app_impressum')]
+    public function impressum(): Response
+    {
+        return $this->render('page/impressum.html.twig');
+    }
 }

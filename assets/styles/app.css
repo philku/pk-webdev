@@ -154,6 +154,75 @@ dialog[open] {
 }
 
 /* ==============================
+   LEGAL PAGES (Impressum, Datenschutz)
+   Minimal prose-like styling without @tailwindcss/typography
+   ============================== */
+.legal-text {
+    line-height: 1.75;
+    color: var(--color-warm-700);
+}
+
+.legal-text h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--color-warm-900);
+    margin-bottom: 2rem;
+}
+
+.legal-text h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-warm-900);
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.legal-text h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-warm-800);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.legal-text h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-warm-800);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.legal-text p {
+    margin-bottom: 1rem;
+}
+
+.legal-text ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.legal-text li {
+    margin-bottom: 0.5rem;
+}
+
+.legal-text a {
+    color: var(--color-accent-600);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.legal-text a:hover {
+    color: var(--color-accent-700);
+}
+
+.legal-text strong {
+    font-weight: 600;
+    color: var(--color-warm-800);
+}
+
+/* ==============================
    LEAFLET POPUP — WARM THEME
    Override Leaflet's default popups to match the warm theme.
    ============================== */

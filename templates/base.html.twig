@@ -66,9 +66,11 @@
                     <p class="text-sm text-warm-400">
                         &copy; {{ 'now'|date('Y') }} Philipp Kuchau
                     </p>
-                    <p class="text-sm text-warm-400">
-                        Symfony &middot; Tailwind CSS &middot; Turbo
-                    </p>
+                    <div class="flex items-center gap-4 text-sm text-warm-400">
+                        <a href="{{ path('app_impressum') }}" class="transition-colors hover:text-warm-600">Impressum</a>
+                        <span>&middot;</span>
+                        <a href="{{ path('app_datenschutz') }}" class="transition-colors hover:text-warm-600">Datenschutz</a>
+                    </div>
                 </div>
             </div>
         </footer>
