@@ -42,14 +42,15 @@
                 <div class="relative shrink-0">
                     <div class="absolute -inset-1 rounded-full bg-accent-600/10 blur-xl"></div>
                     <img
-                        src="{{ asset('images/0A9B5163_final.jpg') }}"
+                        src="{{ asset('images/Portrait_480px.jpeg') }}"
+                        srcset="{{ asset('images/Portrait_480px.jpeg') }} 480w, {{ asset('images/Portrait_720px.jpeg') }} 720w"
                         alt="Philipp Küchau — Fullstack Entwickler"
-                        width="3543"
-                        height="2362"
+                        width="480"
+                        height="360"
                         fetchpriority="high"
                         decoding="async"
                         sizes="(min-width: 1024px) 240px, (min-width: 640px) 208px, 192px"
-                        class="relative h-44 w-44 rounded-full object-cover object-[50%_25%] ring-[1.5px] ring-white/[0.12] sm:h-52 sm:w-52 lg:h-60 lg:w-60"
+                        class="relative h-44 w-44 rounded-full object-cover ring-[1.5px] ring-white/[0.12] sm:h-52 sm:w-52 lg:h-60 lg:w-60"
                     >
                 </div>
 
@@ -78,7 +79,7 @@
 
                     {# CTA buttons #}
                     <div class="mt-7 flex flex-wrap gap-3">
-                        <a href="#" class="group/btn inline-flex items-center gap-2 rounded-lg bg-accent-600/90 px-5 py-2.5 text-[14px] font-semibold text-white shadow-md shadow-accent-600/10 transition-all hover:bg-accent-500/80">
+                        <a href="/downloads/Lebenslauf_Kuechau-Philipp_philkude.pdf" target="_blank" rel="noopener" class="group/btn inline-flex items-center gap-2 rounded-lg bg-accent-600/90 px-5 py-2.5 text-[14px] font-semibold text-white shadow-md shadow-accent-600/10 transition-all hover:bg-accent-500/80">
                             Lebenslauf
                             <span class="transition-transform group-hover/btn:translate-y-0.5">↓</span>
                         </a>
