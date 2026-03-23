@@ -3,7 +3,14 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{% block title %}Philipp Kuchau{% endblock %} | Webentwicklung</title>
+        <title>{% block title %}Philipp Küchau — Fullstack Entwickler{% endblock %} | philku.de</title>
+        <meta name="description" content="{% block meta_description %}Philipp Küchau — Fullstack Entwickler aus Berlin. Symfony, PHP, Tailwind CSS, React. Portfolio und Tech-Demos.{% endblock %}">
+        <meta name="author" content="Philipp Küchau">
+        <meta property="og:title" content="{% block og_title %}Philipp Küchau | Fullstack Entwickler{% endblock %}">
+        <meta property="og:description" content="{% block og_description %}Fullstack Entwickler aus Berlin — Symfony, PHP, Tailwind CSS, React.{% endblock %}">
+        <meta property="og:type" content="website">
+        <meta property="og:locale" content="de_DE">
+        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
 
         {# Fonts: Sora (Headlines) + DM Sans (Body) — self-hosted, GDPR-compliant #}
 
