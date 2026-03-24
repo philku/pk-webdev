@@ -68,7 +68,7 @@
                         <span class="text-white/30">Kundenprojekt</span>
                         <a href="https://tunero.de" target="_blank" rel="noopener" class="text-accent-400/80 transition-colors hover:text-accent-300">tunero.de</a>
                         <span class="text-white/30">Background</span>
-                        <span class="text-white/60">Mathematik · IT-Projektmanagement</span>
+                        <span class="text-white/60">Mathematik · Economics · IT-Projektmanagement</span>
                         <span class="text-white/30">GitHub</span>
                         <a href="https://github.com/philku" target="_blank" rel="noopener" class="text-accent-400/80 transition-colors hover:text-accent-300">github.com/philku</a>
                         <span class="text-white/30">E-Mail</span>
@@ -121,7 +121,7 @@
                 { name: 'PHP', logo: 'php' },
                 { name: 'Symfony', logo: 'symfony' },
                 { name: 'Pimcore', logo: 'pimcore-icon' },
-                { name: 'Twig', color: '#BACF29' },
+                { name: 'Twig', logo: 'twig', logoExt: 'png' },
             ] },
             { label: 'Frontend', items: [
                 { name: 'HTML', logo: 'html5' },
@@ -154,7 +154,7 @@
                         {% for item in category.items %}
                             <div class="flex items-center gap-2 rounded-lg border {{ item.inProgress is defined and item.inProgress ? 'border-dashed border-warm-300 bg-warm-50' : 'border-warm-200 bg-white' }} px-3 py-1.5">
                                 {% if item.logo is defined %}
-                                    <img src="{{ asset('images/logos/' ~ item.logo ~ '.svg') }}"
+                                    <img src="{{ asset('images/logos/' ~ item.logo ~ '.' ~ (item.logoExt is defined ? item.logoExt : 'svg')) }}"
                                          alt="{{ item.name }}"
                                          class="h-4 w-4 {{ item.inProgress is defined and item.inProgress ? 'opacity-60' : '' }}"
                                          loading="lazy">
