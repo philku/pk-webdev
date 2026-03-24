@@ -4,7 +4,7 @@ import { Controller } from '@hotwired/stimulus'
 // Captures keyboard input when the terminal section is clicked,
 // renders typed characters, and responds to a set of fun commands.
 export default class extends Controller {
-    static targets = ['input', 'cursor', 'output', 'prompt']
+    static targets = ['input', 'cursor', 'output', 'prompt', 'hiddenInput']
 
     // Known commands and their responses
     commands = {
@@ -25,16 +25,36 @@ export default class extends Controller {
     }
 
     activate() {
-        if (this.active) return
+        if (this.active) {
+            this.hiddenInputTarget.focus()
+            return
+        }
         this.active = true
 
         // Show the input span next to cursor
         this.inputTarget.classList.remove('hidden')
         this.cursorTarget.classList.add('terminal-cursor-active')
 
-        // Listen for keystrokes
+        // Focus hidden input to open mobile keyboard
+        this.hiddenInputTarget.focus()
+
+        // Listen for keystrokes (desktop)
         this._onKeydown = this.handleKeydown.bind(this)
         document.addEventListener('keydown', this._onKeydown)
+
+        // Listen for input events (mobile)
+        this._onInput = this.handleInput.bind(this)
+        this.hiddenInputTarget.addEventListener('input', this._onInput)
+
+        // Handle Enter on mobile (submit via keydown on hidden input)
+        this._onHiddenKeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault()
+                this.execute()
+                this.hiddenInputTarget.value = ''
+            }
+        }
+        this.hiddenInputTarget.addEventListener('keydown', this._onHiddenKeydown)
 
         // Deactivate when clicking outside
         this._onClickOutside = (e) => {
@@ -46,8 +66,17 @@ export default class extends Controller {
     deactivate() {
         this.active = false
         this.cursorTarget.classList.remove('terminal-cursor-active')
+        this.hiddenInputTarget.blur()
         document.removeEventListener('keydown', this._onKeydown)
         document.removeEventListener('click', this._onClickOutside)
+        this.hiddenInputTarget.removeEventListener('input', this._onInput)
+        this.hiddenInputTarget.removeEventListener('keydown', this._onHiddenKeydown)
+    }
+
+    handleInput() {
+        // Sync hidden input value to buffer (mobile keyboard input)
+        this.buffer = this.hiddenInputTarget.value
+        this.render()
     }
 
     handleKeydown(e) {
