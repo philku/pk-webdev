@@ -5,9 +5,9 @@ import 'leaflet/dist/leaflet.min.css';
 // Leaflet's auto-detection of icon URLs fails with ES module imports.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-    iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconRetinaUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    shadowUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconUrl: '/images/marker-icon.png',
+    iconRetinaUrl: '/images/marker-icon-2x.png',
+    shadowUrl: '/images/marker-shadow.png',
 });
 
 // Concert world map with progressive loading, clustering, and mobile bottom sheet.

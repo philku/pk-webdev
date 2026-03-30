@@ -232,6 +232,13 @@ dialog[open] {
    Override Leaflet's default popups to match the warm theme.
    ============================== */
 
+/* Remove flag */
+.leaflet-attribution-flag {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
 /* Popup container: rounded corners, warm background, soft shadow */
 .metallica-popup .leaflet-popup-content-wrapper {
     background: var(--color-warm-50);
