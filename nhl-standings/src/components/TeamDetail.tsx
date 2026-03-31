@@ -54,50 +54,25 @@ export function TeamDetail({ team, onBack }: TeamDetailProps) {
 
                 {roster && (
                     <div className="space-y-8">
-                        {/* Forwards */}
-                        <div>
-                            <h3 className="font-heading text-lg text-warm-900">
-                                Forwards
-                                <span className="ml-2 text-sm font-normal text-warm-400">
-                                    {roster.forwards.length}
-                                </span>
-                            </h3>
-                            <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                {roster.forwards.map((player) => (
-                                    <PlayerCard key={player.id} player={player} />
-                                ))}
+                        {[
+                            { title: 'Forwards', players: roster.forwards},
+                            { title: 'Defense', players: roster.defensemen},
+                            { title: 'Goalies', players: roster.goalies}
+                        ].map((group) =>(
+                            <div key={group.title}>
+                                <h3 className="font-heading text-lg text-warm-900">
+                                    {group.title}
+                                    <span className="ml-2 text-sm font-normal text-warm-400">
+                                        {group.players.length}
+                                    </span>
+                                </h3>
+                                <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                                    {group.players.map((player) => (
+                                        <PlayerCard key={player.id} player={player}/>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Defensemen */}
-                        <div>
-                            <h3 className="font-heading text-lg text-warm-900">
-                                Defense
-                                <span className="ml-2 text-sm font-normal text-warm-400">
-                                    {roster.defensemen.length}
-                                </span>
-                            </h3>
-                            <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                {roster.defensemen.map((player) => (
-                                    <PlayerCard key={player.id} player={player} />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Goalies */}
-                        <div>
-                            <h3 className="font-heading text-lg text-warm-900">
-                                Goalies
-                                <span className="ml-2 text-sm font-normal text-warm-400">
-                                    {roster.goalies.length}
-                                </span>
-                            </h3>
-                            <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                {roster.goalies.map((player) => (
-                                    <PlayerCard key={player.id} player={player} />
-                                ))}
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 )}
             </div>

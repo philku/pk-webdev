@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: '../public/nhl-build',
-    emptyDirOnBuild: true,
+    emptyOutDir: true,
     rollupOptions: {
       input: 'src/main.tsx',
       output: {
