@@ -1,17 +1,18 @@
+import { useNavigate} from 'react-router-dom'
 import type { TeamStanding } from '../types/standings'
 
 interface TeamRowProps {
     team: TeamStanding;
     rank: number;
-    onSelect: (teamAbbrev: string) => void;
 }
 
-export function TeamRow({ team, rank, onSelect }: TeamRowProps) {
+export function TeamRow({ team, rank }: TeamRowProps) {
+    const navigate = useNavigate()
     const abbrev = team.teamAbbrev.default
 
     return (
         <tr
-            onClick={() => onSelect(abbrev)}
+            onClick={() => navigate('/nhl-standings/team/' + abbrev)}
             className="cursor-pointer transition-colors hover:bg-warm-50"
         >
             <td className="px-4 py-3 text-sm tabular-nums text-warm-400 text-center">
