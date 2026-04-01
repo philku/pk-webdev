@@ -3,10 +3,9 @@ import { TeamRow } from './TeamRow'
 
 interface StandingsTableProps {
     standings: TeamStanding[];
-    onSelectTeam: (teamAbbrev: string) => void;
 }
 
-export function StandingsTable({ standings, onSelectTeam }: StandingsTableProps) {
+export function StandingsTable({ standings }: StandingsTableProps) {
     const sorted = [...standings].sort((a, b) => a.leagueSequence - b.leagueSequence)
 
     return (
@@ -32,7 +31,6 @@ export function StandingsTable({ standings, onSelectTeam }: StandingsTableProps)
                                 key={team.teamAbbrev.default}
                                 team={team}
                                 rank={i + 1}
-                                onSelect={onSelectTeam}
                             />
                         ))}
                     </tbody>

@@ -40,4 +40,10 @@ class NhlController extends AbstractController
 
         return new JsonResponse($response->toArray(), $response->getStatusCode());
     }
+
+    #[Route('/nhl-standings/team/{abbrev}', name: 'app_nhl_team_detail')]
+    public function teamDetail(): Response
+    {
+        return $this->render('nhl/index.html.twig');
+    }
 }
