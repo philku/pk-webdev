@@ -5,6 +5,7 @@ import { useStandings } from './hooks/useStandings'
 import { ConferenceFilter as FilterButtons } from './components/ConferenceFilter'
 import { StandingsTable } from './components/StandingsTable'
 import { TeamDetail } from './components/TeamDetail'
+import { TeamSearch } from './components/TeamSearch'
 import { LoadingSpinner } from './components/LoadingSpinner'
 import { ErrorMessage } from './components/ErrorMessage'
 
@@ -14,9 +15,13 @@ export function App() {
     const { standings, loading, error } = useStandings()
     const [conference, setConference] = useState<ConferenceFilter>('all')
     const [division, setDivision] = useState('all')
+    const [search, setSearch] = useState('')
 
     const filtered = useMemo(() => {
         let result = standings
+        if (search !== '') {
+            result = result.filter((t) => t.teamName.default.toLowerCase().includes(search.toLowerCase()))
+        }
         if (conference !== 'all') {
             result = result.filter((t) => t.conferenceName === conference)
         }
@@ -24,7 +29,7 @@ export function App() {
             result = result.filter((t) => t.divisionName === division)
         }
         return result
-    }, [standings, conference, division])
+    }, [standings, conference, division, search])
 
     if (loading) return <LoadingSpinner />
     if (error) return <ErrorMessage message={error} onRetry={() => window.location.reload()} />
@@ -34,6 +39,10 @@ export function App() {
             <Route path="/nhl-standings" element={
                 <div>
                     <div className="mb-4">
+                        <TeamSearch
+                            search={search}
+                            onSearchChange={setSearch} />
+                        <div className="mt-3" />
                         <FilterButtons
                             conference={conference}
                             division={division}
