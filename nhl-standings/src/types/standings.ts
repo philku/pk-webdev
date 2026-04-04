@@ -24,3 +24,7 @@ export interface StandingsResponse {
 }
 
 export type ConferenceFilter = 'all' | 'Eastern' | 'Western';
+
+export type SortKey = 'points' | 'wins' | 'losses' | 'gamesPlayed' | 'goalDifferential';
+
+export type SortDirection = 'asc' | 'desc';
