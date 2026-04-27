@@ -45,7 +45,8 @@ class PageController extends AbstractController
             $data = $form->getData();
 
             $email = (new Email())
-                ->from($data['email'])
+                ->from('p.kuechau@gmx.de')
+                ->replyTo($data['email'])
                 ->to('p.kuechau@gmx.de')
                 ->subject('Kontaktanfrage von ' . $data['name'])
                 ->text($data['message']);
