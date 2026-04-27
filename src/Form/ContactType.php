@@ -37,6 +37,12 @@ class ContactType extends AbstractType
                     new Assert\NotBlank(message: 'Bitte ausfüllen'),
                 ],
             ])
+            ->add('website', TextType::class, [
+                'label' => 'Website',
+                'required' => false,
+                'mapped' => true,
+                'attr' => ['autocomplete' => 'off', 'tabindex' => '-1'],
+            ])
         ;
     }
 
