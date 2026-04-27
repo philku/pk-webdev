@@ -37,6 +37,11 @@
                 {% endfor %}
             </div>
 
+            {# Honeypot #}
+            <div class="absolute opacity-0 -z-10 h-0 overflow-hidden">
+                {{ form_widget(form.website) }}
+            </div>
+
             {# Nachricht #}
             <div>
                 {{ form_label(form.message, null, {'label_attr': {'class': 'block text-sm font-medium text-warm-700'}}) }}
